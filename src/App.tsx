@@ -1,0 +1,104 @@
+
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+} from "react-router-dom";
+
+import StudentLayout from "./layouts/StudentLayout";
+import AdminLayout from "./layouts/AdminLayout";
+
+import Dashboard from "./pages/Dashboard";
+import PlaceholderPage from "./pages/PlaceholderPage";
+import ContextSelection from "./pages/ContextSelection";
+import Assessment from "./pages/Assessment";
+import LearningSession from "./pages/LearningSession";
+import Results from "./pages/Results";
+
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AssessmentManagement from "./pages/admin/AssessmentManagement";
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Student routes */}
+        <Route element={<StudentLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/learn" element={<ContextSelection />} />
+          <Route
+            path="/learn/pre-test"
+            element={<Assessment type="pre-test" />}
+          />
+          <Route
+            path="/learn/session"
+            element={<LearningSession />}
+          />
+          <Route
+            path="/learn/post-test"
+            element={<Assessment type="post-test" />}
+          />
+          <Route
+            path="/history"
+            element={
+              <PlaceholderPage title="Riwayat Belajar" />
+            }
+          />
+          <Route path="/results" element={<Results />} />
+        </Route>
+
+        {/* Administrator routes */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+
+          <Route
+            path="assessments"
+            element={<AssessmentManagement />}
+          />
+
+          <Route
+            path="ai-config"
+            element={
+              <PlaceholderPage title="Konfigurasi AI" />
+            }
+          />
+
+          <Route
+            path="cases"
+            element={
+              <PlaceholderPage title="Studi Kasus" />
+            }
+          />
+
+          <Route
+            path="students"
+            element={
+              <PlaceholderPage title="Data Siswa" />
+            }
+          />
+
+          <Route
+            path="monitoring"
+            element={
+              <PlaceholderPage title="Monitoring Pembelajaran" />
+            }
+          />
+
+          <Route
+            path="settings"
+            element={
+              <PlaceholderPage title="Pengaturan" />
+            }
+          />
+        </Route>
+
+        {/* Default */}
+        <Route
+          path="*"
+          element={<Navigate to="/dashboard" replace />}
+        />
+      </Routes>
+    </BrowserRouter>
+  );
+}
