@@ -9,7 +9,12 @@ import {
   ClipboardList,
 } from "lucide-react";
 
-import { assessmentQuestions } from "../data/assessmentQuestions";
+import {
+  createAssessmentSnapshot,
+  loadAssessmentSnapshot,
+} from "../utils/assessmentSnapshotStorage";
+
+import type { ManagedQuestion } from "../utils/assessmentQuestionStorage";
 
 import {
   saveAssessmentSubmission,
@@ -40,14 +45,24 @@ export default function Assessment({ type }: AssessmentProps) {
   const [submitted, setSubmitted] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const questions = assessmentQuestions;
-  const currentQuestion = questions[currentIndex];
+  const [questions] = useState<ManagedQuestion[]>(() => {
+    if (type === "pre-test") {
+      return createAssessmentSnapshot();
+    }
+
+    return loadAssessmentSnapshot() ?? [];
+  });
+
+const currentQuestion = questions[currentIndex];
 
   const answeredCount = questions.filter(
     (question) => answers[question.id]?.trim()
   ).length;
 
-  const progress = (answeredCount / questions.length) * 100;
+  const progress =
+  questions.length > 0
+    ? (answeredCount / questions.length) * 100
+    : 0;
 
   const updateAnswer = (value: string) => {
     setAnswers((previous) => ({
@@ -85,6 +100,34 @@ export default function Assessment({ type }: AssessmentProps) {
       setShowConfirm(false);
     }
   };
+
+  if (questions.length === 0) {
+  return (
+    <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-white p-10 text-center">
+      <h1 className="text-2xl font-bold">
+        Asesmen Tidak Tersedia
+      </h1>
+
+      <p className="mt-3 text-text-secondary">
+        {isPreTest
+          ? "Belum ada soal asesmen yang tersedia."
+          : "Data soal asesmen awal tidak ditemukan. Mulai kembali dari asesmen awal."}
+      </p>
+
+      <button
+        type="button"
+        onClick={() =>
+          navigate(
+            isPreTest ? "/learn" : "/learn/pre-test"
+          )
+        }
+        className="mt-6 rounded-lg bg-primary px-6 py-3 font-medium text-white"
+      >
+        Kembali
+      </button>
+    </div>
+  );
+}
 
   if (submitted) {
     return (

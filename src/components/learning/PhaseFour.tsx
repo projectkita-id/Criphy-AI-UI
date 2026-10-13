@@ -6,7 +6,7 @@ import {
   Send,
 } from "lucide-react";
 
-import { mockReconstruction } from "../../data/learningSession";
+import type { DemoLearningContent } from "../../data/demoLearningContent";
 
 export type CERResponse = {
   claim: string;
@@ -16,6 +16,7 @@ export type CERResponse = {
 
 type Props = {
   previousAnswer: string;
+  content: DemoLearningContent["phaseFour"];
   onComplete: (response: CERResponse) => void;
 };
 
@@ -29,6 +30,7 @@ const fields: CERField[] = [
 
 export default function PhaseFour({
   previousAnswer,
+  content,
   onComplete,
 }: Props) {
   const [responses, setResponses] = useState<CERResponse>({
@@ -74,11 +76,11 @@ export default function PhaseFour({
         </p>
 
         <h2 className="mt-4 text-xl font-bold">
-          {mockReconstruction.title}
+          {content.title}
         </h2>
 
         <p className="mt-3 leading-relaxed text-text-secondary">
-          {mockReconstruction.description}
+          {content.description}
         </p>
 
         <div className="mt-6 rounded-xl bg-slate-50 p-5">
@@ -107,7 +109,7 @@ export default function PhaseFour({
           <>
             <div className="mt-8 space-y-8">
               {fields.map((field, index) => {
-                const config = mockReconstruction[field];
+                const config = content[field];
 
                 return (
                   <div key={field}>
@@ -189,7 +191,7 @@ export default function PhaseFour({
                 {fields.map((field) => (
                   <div key={field}>
                     <p className="text-sm font-semibold text-green-800">
-                      {mockReconstruction[field].label}
+                      {content[field].label}
                     </p>
 
                     <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-green-950">

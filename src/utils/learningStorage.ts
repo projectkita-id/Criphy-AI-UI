@@ -1,5 +1,6 @@
 import type { PhaseOneResponse } from "../components/learning/PhaseOne";
 import type { CERResponse } from "../components/learning/PhaseFour";
+import type { CaseStudy } from "../data/caseStudies";
 
 export type LearningSessionData = {
   currentPhase: number;
@@ -9,6 +10,8 @@ export type LearningSessionData = {
   phaseTwoResponse: string | null;
   phaseThreeResponse: string | null;
   phaseFourResponse: CERResponse | null;
+
+  caseStudy?: CaseStudy | null;
 };
 
 const STORAGE_KEY = "criphy-learning-session";

@@ -8,16 +8,18 @@ import {
   Table2,
 } from "lucide-react";
 
-import { mockInvestigation } from "../../data/learningSession";
+import type { DemoLearningContent } from "../../data/demoLearningContent";
 import MotionGraph from "./MotionGraph";
 
 type Props = {
   previousAnswer: string;
+  content: DemoLearningContent["phaseThree"];
   onComplete: (answer: string) => void;
 };
 
 export default function PhaseThree({
   previousAnswer,
+  content,
   onComplete,
 }: Props) {
   const [answer, setAnswer] = useState("");
@@ -38,11 +40,11 @@ export default function PhaseThree({
         </p>
 
         <h2 className="mt-4 text-xl font-bold">
-          {mockInvestigation.title}
+          {content.title}
         </h2>
 
         <p className="mt-3 leading-relaxed text-text-secondary">
-          {mockInvestigation.description}
+          {content.description}
         </p>
 
         <div className="mt-6 rounded-xl bg-slate-50 p-5">
@@ -85,7 +87,7 @@ export default function PhaseThree({
             </thead>
 
             <tbody>
-              {mockInvestigation.data.map((point) => (
+              {content.data.map((point) => (
                 <tr
                   key={point.time}
                   className="hover:bg-slate-50"
@@ -109,7 +111,7 @@ export default function PhaseThree({
       </div>
 
       {/* Motion graph */}
-      <MotionGraph />
+      <MotionGraph data={content.data} />
 
       {/* Evidence-based question */}
       <div className="rounded-xl border border-border bg-white p-7">
@@ -119,7 +121,7 @@ export default function PhaseThree({
         </div>
 
         <h3 className="mt-5 text-xl font-semibold leading-relaxed">
-          {mockInvestigation.question}
+          {content.question}
         </h3>
 
         {!submitted ? (
@@ -161,7 +163,7 @@ export default function PhaseThree({
                   </p>
 
                   <p className="mt-2 text-sm leading-relaxed text-blue-700">
-                    {mockInvestigation.hint}
+                    {content.hint}
                   </p>
                 </div>
               )}

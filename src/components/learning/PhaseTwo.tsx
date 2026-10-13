@@ -7,15 +7,17 @@ import {
   Send,
 } from "lucide-react";
 
-import { mockConflict } from "../../data/learningSession";
+import type { DemoLearningContent } from "../../data/demoLearningContent";
 
 type Props = {
   initialAnswer: string;
+  content: DemoLearningContent["phaseTwo"];
   onComplete: (answer: string) => void;
 };
 
 export default function PhaseTwo({
   initialAnswer,
+  content,
   onComplete,
 }: Props) {
   const [answer, setAnswer] = useState("");
@@ -35,7 +37,7 @@ export default function PhaseTwo({
         </p>
 
         <h2 className="mt-4 text-xl font-bold">
-          {mockConflict.title}
+          {content.title}
         </h2>
 
         <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5">
@@ -43,7 +45,7 @@ export default function PhaseTwo({
             Situasi untuk Dianalisis
           </p>
           <p className="mt-3 leading-relaxed text-amber-950">
-            {mockConflict.scenario}
+            {content.scenario}
           </p>
         </div>
 
@@ -64,7 +66,7 @@ export default function PhaseTwo({
         </div>
 
         <h3 className="mt-5 text-xl font-semibold leading-relaxed">
-          {mockConflict.question}
+          {content.question}
         </h3>
 
         {!submitted ? (
@@ -103,7 +105,7 @@ export default function PhaseTwo({
                     Petunjuk
                   </p>
                   <p className="mt-2 text-sm leading-relaxed text-blue-700">
-                    {mockConflict.hint}
+                    {content.hint}
                   </p>
                 </div>
               )}

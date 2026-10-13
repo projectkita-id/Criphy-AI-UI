@@ -23,6 +23,7 @@ import CaseStudyManagement from "./pages/admin/CaseStudyManagement";
 import StudentManagement from "./pages/admin/StudentManagement";
 import StudentDetail from "./pages/admin/StudentDetail";
 import MonitoringDashboard from "./pages/admin/MonitoringDashboard";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 export default function App() {
   return (
@@ -87,12 +88,7 @@ export default function App() {
             element={<MonitoringDashboard />}
           />
 
-          <Route
-            path="settings"
-            element={
-              <PlaceholderPage title="Pengaturan" />
-            }
-          />
+          <Route path="settings" element={<AdminSettings />} />
         </Route>
 
         {/* Default */}

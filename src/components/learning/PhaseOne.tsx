@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   ArrowRight,
@@ -5,8 +6,6 @@ import {
   Lightbulb,
   Send,
 } from "lucide-react";
-
-import { mockCase } from "../../data/learningSession";
 
 export type Confidence = "LOW" | "MEDIUM" | "HIGH";
 
@@ -16,6 +15,7 @@ export type PhaseOneResponse = {
 };
 
 type Props = {
+  question: string;
   onComplete: (response: PhaseOneResponse) => void;
 };
 
@@ -28,7 +28,10 @@ const confidenceOptions: {
   { value: "HIGH", label: "Sangat Yakin" },
 ];
 
-export default function PhaseOne({ onComplete }: Props) {
+export default function PhaseOne({
+  question,
+  onComplete,
+}: Props) {
   const [answer, setAnswer] = useState("");
   const [confidence, setConfidence] =
     useState<Confidence | null>(null);
@@ -48,7 +51,7 @@ export default function PhaseOne({ onComplete }: Props) {
       </div>
 
       <h2 className="mt-5 text-xl font-semibold leading-relaxed">
-        {mockCase.initialQuestion}
+        {question}
       </h2>
 
       {!submitted ? (
@@ -131,10 +134,11 @@ export default function PhaseOne({ onComplete }: Props) {
             <p className="font-semibold text-blue-800">
               Langkah Selanjutnya
             </p>
+
             <p className="mt-2 text-sm leading-relaxed text-blue-700">
-              Prediksi awalmu telah tercatat. Pada tahap berikutnya,
-              kamu akan mengeksplorasi situasi yang dapat
-              mendukung atau menantang prediksimu.
+              Prediksi awalmu telah tercatat. Pada tahap
+              berikutnya, kamu akan mengeksplorasi situasi
+              yang dapat mendukung atau menantang prediksimu.
             </p>
           </div>
 
@@ -143,6 +147,7 @@ export default function PhaseOne({ onComplete }: Props) {
               type="button"
               onClick={() => {
                 if (!confidence) return;
+
                 onComplete({
                   answer: answer.trim(),
                   confidence,

@@ -1,9 +1,11 @@
-import { assessmentQuestions } from "../data/assessmentQuestions";
-import { assessmentAnswerKey } from "../data/assessmentAnswerKey";
 
 import type {
   AssessmentSubmission,
 } from "./assessmentStorage";
+
+import {
+  loadAssessmentSnapshot,
+} from "./assessmentSnapshotStorage";
 
 export type MultipleChoiceResult = {
   questionId: string;
@@ -23,11 +25,13 @@ export type AssessmentScore = {
 export function calculateAssessmentScore(
   submission: AssessmentSubmission
 ): AssessmentScore {
-  const multipleChoiceQuestions = assessmentQuestions.filter(
+  const questions = loadAssessmentSnapshot() ?? [];
+
+  const multipleChoiceQuestions = questions.filter(
     (question) => question.type === "MULTIPLE_CHOICE"
   );
 
-  const essayQuestions = assessmentQuestions.filter(
+  const essayQuestions = questions.filter(
     (question) => question.type === "ESSAY"
   );
 
@@ -38,14 +42,12 @@ export function calculateAssessmentScore(
       );
 
       const selectedAnswer = submittedAnswer?.answer ?? null;
-      const correctAnswer = assessmentAnswerKey[question.id];
 
       return {
         questionId: question.id,
         selectedAnswer,
         isCorrect:
-          correctAnswer !== undefined &&
-          selectedAnswer === correctAnswer,
+          selectedAnswer === question.correctAnswer,
       };
     });
 
@@ -57,7 +59,9 @@ export function calculateAssessmentScore(
 
   const score =
     totalQuestions > 0
-      ? Math.round((correctAnswers / totalQuestions) * 100)
+      ? Math.round(
+          (correctAnswers / totalQuestions) * 100
+        )
       : null;
 
   return {

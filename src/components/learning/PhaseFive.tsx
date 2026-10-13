@@ -7,7 +7,7 @@ import {
   Send,
 } from "lucide-react";
 
-import { mockReflection } from "../../data/learningSession";
+import type { DemoLearningContent } from "../../data/demoLearningContent";
 import type { PhaseOneResponse } from "./PhaseOne";
 import type { CERResponse } from "./PhaseFour";
 
@@ -19,12 +19,14 @@ export type ReflectionResponse = {
 type Props = {
   initialResponse: PhaseOneResponse;
   reconstructionResponse: CERResponse;
+  content: DemoLearningContent["phaseFive"];
   onComplete: (response: ReflectionResponse) => void;
 };
 
 export default function PhaseFive({
   initialResponse,
   reconstructionResponse,
+  content,
   onComplete,
 }: Props) {
   const [responses, setResponses] = useState<ReflectionResponse>({
@@ -57,11 +59,11 @@ export default function PhaseFive({
         </p>
 
         <h2 className="mt-4 text-xl font-bold">
-          {mockReflection.title}
+          {content.title}
         </h2>
 
         <p className="mt-3 leading-relaxed text-text-secondary">
-          {mockReflection.description}
+          {content.description}
         </p>
       </div>
 
@@ -153,7 +155,7 @@ export default function PhaseFive({
                   htmlFor="reflection-understanding"
                   className="block text-sm font-semibold leading-relaxed"
                 >
-                  1. {mockReflection.understandingQuestion}
+                  1. {content.understandingQuestion}
                 </label>
 
                 <textarea
@@ -166,7 +168,7 @@ export default function PhaseFive({
                     }))
                   }
                   rows={5}
-                  placeholder={mockReflection.understandingPlaceholder}
+                  placeholder={content.understandingPlaceholder}
                   className="mt-3 w-full resize-y rounded-xl border border-border p-4 text-sm leading-relaxed outline-none focus:border-primary focus:ring-2 focus:ring-blue-100"
                 />
               </div>
@@ -176,7 +178,7 @@ export default function PhaseFive({
                   htmlFor="reflection-evidence"
                   className="block text-sm font-semibold leading-relaxed"
                 >
-                  2. {mockReflection.evidenceQuestion}
+                  2. {content.evidenceQuestion}
                 </label>
 
                 <textarea
@@ -189,7 +191,7 @@ export default function PhaseFive({
                     }))
                   }
                   rows={5}
-                  placeholder={mockReflection.evidencePlaceholder}
+                  placeholder={content.evidencePlaceholder}
                   className="mt-3 w-full resize-y rounded-xl border border-border p-4 text-sm leading-relaxed outline-none focus:border-primary focus:ring-2 focus:ring-blue-100"
                 />
               </div>
