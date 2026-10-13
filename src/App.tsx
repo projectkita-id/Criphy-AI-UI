@@ -20,6 +20,9 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AssessmentManagement from "./pages/admin/AssessmentManagement";
 import AIConfiguration from "./pages/admin/AIConfiguration";
 import CaseStudyManagement from "./pages/admin/CaseStudyManagement";
+import StudentManagement from "./pages/admin/StudentManagement";
+import StudentDetail from "./pages/admin/StudentDetail";
+import MonitoringDashboard from "./pages/admin/MonitoringDashboard";
 
 export default function App() {
   return (
@@ -71,16 +74,17 @@ export default function App() {
 
           <Route
             path="students"
-            element={
-              <PlaceholderPage title="Data Siswa" />
-            }
+            element={<StudentManagement />}
+          />
+
+          <Route
+            path="students/:studentId"
+            element={<StudentDetail />}
           />
 
           <Route
             path="monitoring"
-            element={
-              <PlaceholderPage title="Monitoring Pembelajaran" />
-            }
+            element={<MonitoringDashboard />}
           />
 
           <Route
