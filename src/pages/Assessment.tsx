@@ -15,6 +15,7 @@ import {
 } from "../utils/assessmentSnapshotStorage";
 
 import type { ManagedQuestion } from "../utils/assessmentQuestionStorage";
+import { archiveCompletedLearningCycle } from "../utils/learningHistoryArchive";
 
 import {
   saveAssessmentSubmission,
@@ -89,17 +90,38 @@ const currentQuestion = questions[currentIndex];
         submittedAt: new Date().toISOString(),
       });
 
+      // After the post-test, archive the completed
+      // learning cycle before showing the results.
+      if (!isPreTest) {
+        const archived = archiveCompletedLearningCycle();
+
+        if (!archived) {
+          setSaveError(
+            "Asesmen tersimpan, tetapi riwayat pembelajaran " +
+            "belum dapat diarsipkan. Silakan coba lagi."
+          );
+          setShowConfirm(false);
+          return;
+        }
+      }
+
       setSaveError(null);
       setSubmitted(true);
       setShowConfirm(false);
     } catch (error) {
-      console.error("Failed to save assessment:", error);
+      console.error(
+        "Failed to save assessment or archive history:",
+        error
+      );
+
       setSaveError(
-        "Gagal menyimpan jawaban. Silakan coba lagi."
+        "Gagal menyimpan asesmen atau riwayat pembelajaran. " +
+        "Silakan coba lagi."
       );
       setShowConfirm(false);
     }
   };
+
 
   if (questions.length === 0) {
   return (

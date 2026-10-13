@@ -29,13 +29,9 @@ import {
 
 import { loadCaseStudies } from "../utils/caseStudyStorage";
 
-import {
-  isSupportedLearningCase,
-} from "../data/supportedLearningCases";
+import { isSupportedLearningCase } from "../data/supportedLearningCases";
 
-import {
-  demoLearningContent,
-} from "../data/demoLearningContent";
+import { demoLearningContent } from "../data/demoLearningContent";
 
 import type {
   CaseStudy as CaseStudyData,
@@ -51,8 +47,7 @@ import {
 
 import type { AIGeneratedCaseStudy } from "../types/aiLearning";
 
-// Select the published case supported by
-// the current five-phase demo.
+// Select a published case supported by the current demo.
 function selectPublishedCase(
   context: string | null
 ): CaseStudyData | null {
@@ -84,6 +79,9 @@ function createInitialSession(
   context: string | null
 ): LearningSessionData {
   return {
+    id: crypto.randomUUID(),
+    startedAt: new Date().toISOString(),
+    status: "IN_PROGRESS",
     currentPhase: 1,
     context,
     caseStudy: selectPublishedCase(context),
@@ -91,6 +89,7 @@ function createInitialSession(
     phaseTwoResponse: null,
     phaseThreeResponse: null,
     phaseFourResponse: null,
+    phaseFiveResponse: null,
   };
 }
 
@@ -109,54 +108,75 @@ export default function LearningSession() {
       } | null
     )?.context ?? null;
 
+  // Initialize or resume learning session.
+  const [session, setSession] = useState<LearningSessionData>(
+    () => {
+      const saved = loadLearningSession();
 
-    const [session, setSession] = useState<LearningSessionData>(
-      () => {
-        const saved = loadLearningSession();
+      // Phase 5 has finished.
+      // The student must complete the post-test.
+      if (saved?.status === "AWAITING_POST_TEST") {
+        return saved;
+      }
 
-        // If the student selected a different context,
-        // start a new session instead of resuming the old one.
-        if (
-          saved &&
-          navigationContext &&
-          saved.context !== navigationContext
-        ) {
-          return createInitialSession(navigationContext);
-        }
-
-        // Resume an existing supported session.
-        if (saved) {
-          const selectedCase =
-            saved.caseStudy ??
-            selectPublishedCase(saved.context);
-
-          if (
-            selectedCase &&
-            isSupportedLearningCase(selectedCase)
-          ) {
-            return {
-              ...saved,
-              caseStudy: selectedCase,
-            };
-          }
-
-          // Do not resume unsupported old sessions.
-          return createInitialSession(
-            navigationContext ?? saved.context
-          );
-        }
-
-        // No previous session: create a new one.
+      // Switching contexts starts a new session.
+      if (
+        saved &&
+        navigationContext &&
+        saved.context !== navigationContext
+      ) {
         return createInitialSession(navigationContext);
       }
-    );
 
+      // Resume a supported learning session.
+      if (saved) {
+        const selectedCase =
+          saved.caseStudy ??
+          selectPublishedCase(saved.context);
+
+        if (
+          selectedCase &&
+          isSupportedLearningCase(selectedCase)
+        ) {
+          return {
+            ...saved,
+            id: saved.id ?? crypto.randomUUID(),
+            startedAt:
+              saved.startedAt ?? new Date().toISOString(),
+            status: saved.status ?? "IN_PROGRESS",
+            phaseFiveResponse:
+              saved.phaseFiveResponse ?? null,
+            caseStudy: selectedCase,
+          };
+        }
+
+        // Unsupported sessions cannot resume the demo.
+        return createInitialSession(
+          navigationContext ?? saved.context
+        );
+      }
+
+      // No saved session.
+      return createInitialSession(navigationContext);
+    }
+  );
 
   // Persist learning progress.
   useEffect(() => {
     saveLearningSession(session);
   }, [session]);
 
+  // Redirect students to the post-test after Phase 5.
+  useEffect(() => {
+    if (session.status === "AWAITING_POST_TEST") {
+      navigate("/learn/post-test", {
+        replace: true,
+        state: { context: session.context },
+      });
+    }
+  }, [session.status, session.context, navigate]);
+
+  // Update session state.
   const updateSession = (
     updates: Partial<LearningSessionData>
   ) => {
@@ -204,40 +224,48 @@ export default function LearningSession() {
 
   // Phase 5 → Post-Test
   const handlePhaseFiveComplete = (
-    _response: ReflectionResponse
+    response: ReflectionResponse
   ) => {
-    const context = session.context;
+    const completedSession: LearningSessionData = {
+      ...session,
+      status: "AWAITING_POST_TEST",
+      phaseFiveResponse: response,
+    };
 
-    clearLearningSession();
+    try {
+      // Save before redirecting.
+      saveLearningSession(completedSession);
 
-    navigate("/learn/post-test", {
-      state: { context },
-    });
-  };
-  
-  // Display the AI preparation interface when
-  // no supported demo case is available.
-    if (!session.caseStudy) {
-      const validContext: CaseStudyContext | null =
-        session.context === "DAILY_LIFE" ||
-        session.context === "ENVIRONMENT" ||
-        session.context === "TECHNOLOGY"
-          ? session.context
-          : null;
-
-      return (
-        <AICasePreparation
-          context={validContext}
-          state={aiState}
-          onBack={() => {
-            clearLearningSession();
-            navigate("/learn");
-          }}
-        />
+      // The redirect effect handles navigation.
+      setSession(completedSession);
+    } catch (error) {
+      console.error(
+        "Failed to preserve completed learning session:",
+        error
       );
     }
+  };
 
+  // Display AI preparation if no supported case exists.
+  if (!session.caseStudy) {
+    const validContext: CaseStudyContext | null =
+      session.context === "DAILY_LIFE" ||
+      session.context === "ENVIRONMENT" ||
+      session.context === "TECHNOLOGY"
+        ? session.context
+        : null;
 
+    return (
+      <AICasePreparation
+        context={validContext}
+        state={aiState}
+        onBack={() => {
+          clearLearningSession();
+          navigate("/learn");
+        }}
+      />
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-7">
@@ -268,9 +296,7 @@ export default function LearningSession() {
       {/* Phase 1: Aktivasi Konsepsi Awal */}
       {session.currentPhase === 1 && (
         <PhaseOne
-          question={
-            demoLearningContent.phaseOne.question
-          }
+          question={demoLearningContent.phaseOne.question}
           onComplete={handlePhaseOneComplete}
         />
       )}

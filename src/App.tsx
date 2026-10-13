@@ -9,8 +9,8 @@ import {
 import StudentLayout from "./layouts/StudentLayout";
 import AdminLayout from "./layouts/AdminLayout";
 
+// import PlaceholderPage from "./pages/PlaceholderPage";
 import Dashboard from "./pages/Dashboard";
-import PlaceholderPage from "./pages/PlaceholderPage";
 import ContextSelection from "./pages/ContextSelection";
 import Assessment from "./pages/Assessment";
 import LearningSession from "./pages/LearningSession";
@@ -24,6 +24,8 @@ import StudentManagement from "./pages/admin/StudentManagement";
 import StudentDetail from "./pages/admin/StudentDetail";
 import MonitoringDashboard from "./pages/admin/MonitoringDashboard";
 import AdminSettings from "./pages/admin/AdminSettings";
+import LearningHistory from "./pages/LearningHistory";
+import LearningHistoryDetail from "./pages/LearningHistoryDetail";
 
 export default function App() {
   return (
@@ -32,25 +34,34 @@ export default function App() {
         {/* Student routes */}
         <Route element={<StudentLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
+
           <Route path="/learn" element={<ContextSelection />} />
+
           <Route
             path="/learn/pre-test"
             element={<Assessment type="pre-test" />}
           />
           <Route
+
             path="/learn/session"
             element={<LearningSession />}
           />
+
           <Route
             path="/learn/post-test"
             element={<Assessment type="post-test" />}
           />
+
           <Route
             path="/history"
-            element={
-              <PlaceholderPage title="Riwayat Belajar" />
-            }
+            element={<LearningHistory />}
           />
+
+          <Route
+            path="/history/:historyId"
+            element={<LearningHistoryDetail />}
+          />
+
           <Route path="/results" element={<Results />} />
         </Route>
 

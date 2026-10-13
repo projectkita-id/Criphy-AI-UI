@@ -1,15 +1,26 @@
+
 import type { PhaseOneResponse } from "../components/learning/PhaseOne";
 import type { CERResponse } from "../components/learning/PhaseFour";
+import type { ReflectionResponse } from "../components/learning/PhaseFive";
 import type { CaseStudy } from "../data/caseStudies";
 
+export type LearningSessionStatus =
+  | "IN_PROGRESS"
+  | "AWAITING_POST_TEST";
+
 export type LearningSessionData = {
+  id?: string;
+  startedAt?: string;
+
   currentPhase: number;
   context: string | null;
+  status?: LearningSessionStatus;
 
   phaseOneResponse: PhaseOneResponse | null;
   phaseTwoResponse: string | null;
   phaseThreeResponse: string | null;
   phaseFourResponse: CERResponse | null;
+  phaseFiveResponse?: ReflectionResponse | null;
 
   caseStudy?: CaseStudy | null;
 };
@@ -26,6 +37,7 @@ export function saveLearningSession(
     );
   } catch (error) {
     console.error("Failed to save learning session:", error);
+    throw error;
   }
 }
 
