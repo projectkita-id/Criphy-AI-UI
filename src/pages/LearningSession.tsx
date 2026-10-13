@@ -42,6 +42,15 @@ import type {
   CaseStudyContext,
 } from "../data/caseStudies";
 
+import AICasePreparation from "../components/learning/AICasePreparation";
+
+import {
+  createIdleAIState,
+  type AIServiceState,
+} from "../types/aiServiceState";
+
+import type { AIGeneratedCaseStudy } from "../types/aiLearning";
+
 // Select the published case supported by
 // the current five-phase demo.
 function selectPublishedCase(
@@ -89,6 +98,10 @@ export default function LearningSession() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [aiState] = useState<
+    AIServiceState<AIGeneratedCaseStudy>
+  >(() => createIdleAIState<AIGeneratedCaseStudy>());
+
   const navigationContext: string | null =
     (
       location.state as {
@@ -96,35 +109,48 @@ export default function LearningSession() {
       } | null
     )?.context ?? null;
 
-  const [session, setSession] = useState<LearningSessionData>(
-    () => {
-      const saved = loadLearningSession();
 
-      // Resume a supported session when available.
-      if (saved) {
-        const selectedCase =
-          saved.caseStudy ??
-          selectPublishedCase(saved.context);
+    const [session, setSession] = useState<LearningSessionData>(
+      () => {
+        const saved = loadLearningSession();
 
+        // If the student selected a different context,
+        // start a new session instead of resuming the old one.
         if (
-          selectedCase &&
-          isSupportedLearningCase(selectedCase)
+          saved &&
+          navigationContext &&
+          saved.context !== navigationContext
         ) {
-          return {
-            ...saved,
-            caseStudy: selectedCase,
-          };
+          return createInitialSession(navigationContext);
         }
 
-        // Do not resume unsupported old sessions.
-        return createInitialSession(
-          saved.context ?? navigationContext
-        );
-      }
+        // Resume an existing supported session.
+        if (saved) {
+          const selectedCase =
+            saved.caseStudy ??
+            selectPublishedCase(saved.context);
 
-      return createInitialSession(navigationContext);
-    }
-  );
+          if (
+            selectedCase &&
+            isSupportedLearningCase(selectedCase)
+          ) {
+            return {
+              ...saved,
+              caseStudy: selectedCase,
+            };
+          }
+
+          // Do not resume unsupported old sessions.
+          return createInitialSession(
+            navigationContext ?? saved.context
+          );
+        }
+
+        // No previous session: create a new one.
+        return createInitialSession(navigationContext);
+      }
+    );
+
 
   // Persist learning progress.
   useEffect(() => {
@@ -188,36 +214,30 @@ export default function LearningSession() {
       state: { context },
     });
   };
+  
+  // Display the AI preparation interface when
+  // no supported demo case is available.
+    if (!session.caseStudy) {
+      const validContext: CaseStudyContext | null =
+        session.context === "DAILY_LIFE" ||
+        session.context === "ENVIRONMENT" ||
+        session.context === "TECHNOLOGY"
+          ? session.context
+          : null;
 
-  // No supported case is available for this context.
-  if (!session.caseStudy) {
-    return (
-      <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-white p-10 text-center">
-        <h1 className="text-2xl font-bold">
-          Materi Pembelajaran Belum Tersedia
-        </h1>
-
-        <p className="mt-3 text-text-secondary">
-          Sesi pembelajaran lengkap untuk konteks ini
-          belum tersedia dalam versi demo CRI-PHY AI.
-          Saat ini, pembelajaran interaktif hanya
-          mendukung studi kasus Dua Mobil di Jalan Raya
-          pada konteks Kehidupan Sehari-hari.
-        </p>
-
-        <button
-          type="button"
-          onClick={() => {
+      return (
+        <AICasePreparation
+          context={validContext}
+          state={aiState}
+          onBack={() => {
             clearLearningSession();
             navigate("/learn");
           }}
-          className="mt-6 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          Pilih Konteks Lain
-        </button>
-      </div>
-    );
-  }
+        />
+      );
+    }
+
+
 
   return (
     <div className="mx-auto max-w-6xl space-y-7">

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -9,7 +10,11 @@ import {
   Lightbulb,
 } from "lucide-react";
 
-type LearningContext = "DAILY_LIFE" | "ENVIRONMENT" | "TECHNOLOGY";
+import type { CaseStudyContext } from "../data/caseStudies";
+import { loadLearningSession } from "../utils/learningStorage";
+import { isSupportedLearningCase } from "../data/supportedLearningCases";
+
+type LearningContext = CaseStudyContext;
 
 const contexts = [
   {
@@ -47,16 +52,58 @@ export default function ContextSelection() {
   const [selectedContext, setSelectedContext] =
     useState<LearningContext | null>(null);
 
+  // Read the currently saved learning session.
+  const savedSession = loadLearningSession();
+
   const selected = contexts.find(
     (context) => context.id === selectedContext
+  );
+
+  // A session can only be resumed when:
+  // 1. Its context matches the selected context.
+  // 2. Its phase is within the five-phase workflow.
+  // 3. Its case study is supported by the current demo.
+  const canResume = Boolean(
+    selectedContext &&
+      savedSession &&
+      savedSession.context === selectedContext &&
+      savedSession.currentPhase >= 1 &&
+      savedSession.currentPhase <= 5 &&
+      savedSession.caseStudy &&
+      isSupportedLearningCase(savedSession.caseStudy)
   );
 
   const handleContinue = () => {
     if (!selectedContext) return;
 
-    // Temporary navigation until the pre-test is implemented.
+    const session = loadLearningSession();
+
+    const hasResumableSession = Boolean(
+      session &&
+        session.context === selectedContext &&
+        session.currentPhase >= 1 &&
+        session.currentPhase <= 5 &&
+        session.caseStudy &&
+        isSupportedLearningCase(session.caseStudy)
+    );
+
+    // Resume the previous learning session
+    // without repeating the pre-test.
+    if (hasResumableSession) {
+      navigate("/learn/session", {
+        state: {
+          context: selectedContext,
+        },
+      });
+
+      return;
+    }
+
+    // Otherwise, start a new learning flow.
     navigate("/learn/pre-test", {
-      state: { context: selectedContext },
+      state: {
+        context: selectedContext,
+      },
     });
   };
 
@@ -74,8 +121,9 @@ export default function ContextSelection() {
 
         <p className="mt-3 max-w-2xl text-text-secondary">
           Pilih konteks yang paling menarik bagimu.
-          Sistem akan menyesuaikan studi kasus fisika
-          berdasarkan konteks yang dipilih.
+          Konteks yang dipilih akan digunakan untuk
+          menyesuaikan studi kasus dan konflik kognitif
+          dalam proses pembelajaran.
         </p>
       </div>
 
@@ -106,6 +154,15 @@ export default function ContextSelection() {
           const Icon = context.icon;
           const isSelected = selectedContext === context.id;
 
+          const isResumableContext = Boolean(
+            savedSession &&
+              savedSession.context === context.id &&
+              savedSession.currentPhase >= 1 &&
+              savedSession.currentPhase <= 5 &&
+              savedSession.caseStudy &&
+              isSupportedLearningCase(savedSession.caseStudy)
+          );
+
           return (
             <button
               key={context.id}
@@ -118,12 +175,14 @@ export default function ContextSelection() {
                   : "border-border hover:border-blue-200"
               }`}
             >
+              {/* Selection indicator */}
               {isSelected && (
                 <div className="absolute right-5 top-5 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white">
                   <Check size={16} />
                 </div>
               )}
 
+              {/* Context icon */}
               <div
                 className={`flex h-14 w-14 items-center justify-center rounded-xl ${context.color}`}
               >
@@ -134,12 +193,21 @@ export default function ContextSelection() {
                 {context.title}
               </h3>
 
+              {/* Resume indicator */}
+              {isResumableContext && (
+                <span className="mt-3 inline-flex w-fit rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+                  Lanjutkan Fase {savedSession?.currentPhase}
+                </span>
+              )}
+
               <p className="mt-3 text-sm leading-relaxed text-text-secondary">
                 {context.description}
               </p>
 
               <p className="mt-auto pt-6 text-xs leading-relaxed text-text-secondary">
-                <span className="font-semibold">Contoh: </span>
+                <span className="font-semibold">
+                  Contoh:{" "}
+                </span>
                 {context.example}
               </p>
             </button>
@@ -162,9 +230,11 @@ export default function ContextSelection() {
             </p>
 
             <p className="mt-1 text-sm text-text-secondary">
-              {selected
-                ? "Kamu siap melanjutkan ke asesmen awal."
-                : "Silakan pilih salah satu konteks di atas."}
+              {!selected
+                ? "Silakan pilih salah satu konteks di atas."
+                : canResume
+                  ? `Kamu dapat melanjutkan pembelajaran dari Fase ${savedSession?.currentPhase} tanpa mengulang asesmen awal.`
+                  : "Kamu siap melanjutkan ke asesmen awal."}
             </p>
           </div>
 
@@ -174,7 +244,10 @@ export default function ContextSelection() {
             disabled={!selectedContext}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            Lanjutkan
+            {canResume
+              ? "Lanjutkan Pembelajaran"
+              : "Lanjutkan"}
+
             <ArrowRight size={18} />
           </button>
         </div>
