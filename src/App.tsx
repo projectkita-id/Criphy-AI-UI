@@ -18,6 +18,8 @@ import Results from "./pages/Results";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AssessmentManagement from "./pages/admin/AssessmentManagement";
+import AIConfiguration from "./pages/admin/AIConfiguration";
+import CaseStudyManagement from "./pages/admin/CaseStudyManagement";
 
 export default function App() {
   return (
@@ -59,16 +61,12 @@ export default function App() {
 
           <Route
             path="ai-config"
-            element={
-              <PlaceholderPage title="Konfigurasi AI" />
-            }
+            element={<AIConfiguration />}
           />
 
           <Route
             path="cases"
-            element={
-              <PlaceholderPage title="Studi Kasus" />
-            }
+            element={<CaseStudyManagement />}
           />
 
           <Route
