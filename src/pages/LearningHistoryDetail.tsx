@@ -1,17 +1,34 @@
 
 import { Link, useParams } from "react-router-dom";
+import type { ReactNode } from "react";
+
 import {
   ArrowLeft,
   BookOpen,
   CalendarDays,
   CheckCircle2,
   ClipboardList,
+  Clock3,
   Lightbulb,
+  TrendingUp,
+  XCircle,
 } from "lucide-react";
 
 import {
   getLearningHistoryRecord,
 } from "../utils/learningHistoryStorage";
+
+import {
+  calculateAssessmentScore,
+} from "../utils/assessmentScoring";
+
+import type {
+  AssessmentSubmission,
+} from "../utils/assessmentStorage";
+
+import type {
+  ManagedQuestion,
+} from "../utils/assessmentQuestionStorage";
 
 import {
   caseStudyContexts,
@@ -77,7 +94,7 @@ function PhaseSection({
 }: {
   number: number;
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section className="rounded-2xl border border-border bg-white p-6">
@@ -94,6 +111,179 @@ function PhaseSection({
   );
 }
 
+function AssessmentHistorySection({
+  title,
+  submission,
+  questions,
+}: {
+  title: string;
+  submission: AssessmentSubmission | null;
+  questions: ManagedQuestion[] | null;
+}) {
+  if (!submission) {
+    return (
+      <div className="rounded-xl border border-border p-5">
+        <h3 className="font-semibold">{title}</h3>
+        <p className="mt-2 text-sm text-text-secondary">
+          Asesmen belum tersedia.
+        </p>
+      </div>
+    );
+  }
+
+  const result = questions
+    ? calculateAssessmentScore(submission, questions)
+    : null;
+
+  return (
+    <div className="rounded-xl border border-border p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h3 className="text-base font-bold">{title}</h3>
+
+          <p className="mt-1 text-sm text-text-secondary">
+            Dikumpulkan {formatDate(submission.submittedAt)}
+          </p>
+        </div>
+
+        <div className="rounded-lg bg-blue-50 px-4 py-2 text-center">
+          <p className="text-xs font-medium text-primary">
+            Nilai Pilihan Ganda
+          </p>
+
+          <p className="mt-1 text-xl font-bold text-primary">
+            {result?.score == null
+              ? "—"
+              : `${result.score}/100`}
+          </p>
+        </div>
+      </div>
+
+      {!questions ? (
+        <div className="mt-5 rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
+          Data soal untuk asesmen ini tidak tersimpan.
+          Jawaban asli masih tersedia, tetapi nilai dan
+          teks soal tidak dapat ditampilkan secara akurat.
+
+          <div className="mt-4 space-y-3">
+            {submission.answers.map((answer, index) => (
+              <AnswerBlock
+                key={`${answer.questionId}-${index}`}
+                label={`Jawaban ${index + 1} — ID: ${answer.questionId}`}
+                answer={answer.answer}
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-6 space-y-5">
+          {questions.map((question, index) => {
+            const submittedAnswer = submission.answers.find(
+              (answer) => answer.questionId === question.id
+            );
+
+            const answer = submittedAnswer?.answer ?? null;
+
+            if (question.type === "MULTIPLE_CHOICE") {
+              const isCorrect =
+                answer === question.correctAnswer;
+
+              const selectedOption = question.options.find(
+                (option) => option.id === answer
+              );
+
+              const correctOption = question.options.find(
+                (option) =>
+                  option.id === question.correctAnswer
+              );
+
+              return (
+                <div
+                  key={question.id}
+                  className="rounded-xl bg-slate-50 p-5"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                      Soal {index + 1} — Pilihan Ganda
+                    </p>
+
+                    {isCorrect ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700">
+                        <CheckCircle2 size={15} />
+                        Benar
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600">
+                        <XCircle size={15} />
+                        Salah
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-3 whitespace-pre-wrap font-semibold leading-relaxed">
+                    {question.question}
+                  </p>
+
+                  <div className="mt-4 space-y-3">
+                    <AnswerBlock
+                      label="Jawaban Kamu"
+                      answer={
+                        selectedOption?.text ??
+                        (answer
+                          ? "Pilihan tidak ditemukan."
+                          : null)
+                      }
+                    />
+
+                    {!isCorrect && (
+                      <AnswerBlock
+                        label="Jawaban Benar"
+                        answer={
+                          correctOption?.text ??
+                          "Kunci jawaban tidak tersedia."
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div
+                key={question.id}
+                className="rounded-xl bg-slate-50 p-5"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                    Soal {index + 1} — Esai
+                  </p>
+
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700">
+                    <Clock3 size={15} />
+                    Belum Dinilai
+                  </span>
+                </div>
+
+                <p className="mt-3 whitespace-pre-wrap font-semibold leading-relaxed">
+                  {question.question}
+                </p>
+
+                <div className="mt-4">
+                  <AnswerBlock
+                    label="Jawaban Kamu"
+                    answer={answer}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function LearningHistoryDetail() {
   const { historyId } = useParams<{ historyId: string }>();
 
@@ -104,7 +294,10 @@ export default function LearningHistoryDetail() {
   if (!record) {
     return (
       <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-white p-10 text-center">
-        <BookOpen size={36} className="mx-auto text-text-secondary" />
+        <BookOpen
+          size={36}
+          className="mx-auto text-text-secondary"
+        />
 
         <h1 className="mt-5 text-2xl font-bold">
           Riwayat Tidak Ditemukan
@@ -132,6 +325,23 @@ export default function LearningHistoryDetail() {
   };
 
   const confidence = record.phaseOneResponse?.confidence;
+
+  const questions = record.assessmentQuestions ?? null;
+
+  const preScore =
+    record.preTest && questions
+      ? calculateAssessmentScore(record.preTest, questions)
+      : null;
+
+  const postScore =
+    record.postTest && questions
+      ? calculateAssessmentScore(record.postTest, questions)
+      : null;
+
+  const improvement =
+    preScore?.score != null && postScore?.score != null
+      ? postScore.score - preScore.score
+      : null;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -180,37 +390,86 @@ export default function LearningHistoryDetail() {
         </div>
       </div>
 
-      {/* Assessment status */}
+      {/* Assessment history */}
       <section className="rounded-2xl border border-border bg-white p-6">
         <div className="flex items-center gap-2">
-          <ClipboardList size={20} className="text-primary" />
+          <ClipboardList
+            size={20}
+            className="text-primary"
+          />
+
           <h2 className="text-lg font-bold">
             Riwayat Asesmen
           </h2>
         </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <p className="mt-2 text-sm text-text-secondary">
+          Lihat kembali soal, jawaban, dan hasil asesmen
+          yang digunakan dalam sesi pembelajaran ini.
+        </p>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl bg-slate-50 p-5">
             <p className="text-sm font-semibold">
-              Asesmen Awal
+              Pre-Test
             </p>
-            <p className="mt-2 text-sm text-text-secondary">
-              {record.preTest
-                ? `Dikumpulkan ${formatDate(record.preTest.submittedAt)}`
-                : "Belum tersedia"}
+
+            <p className="mt-2 text-2xl font-bold">
+              {preScore?.score == null
+                ? "—"
+                : `${preScore.score}/100`}
             </p>
           </div>
 
           <div className="rounded-xl bg-slate-50 p-5">
             <p className="text-sm font-semibold">
-              Asesmen Akhir
+              Post-Test
             </p>
-            <p className="mt-2 text-sm text-text-secondary">
-              {record.postTest
-                ? `Dikumpulkan ${formatDate(record.postTest.submittedAt)}`
-                : "Belum tersedia"}
+
+            <p className="mt-2 text-2xl font-bold">
+              {postScore?.score == null
+                ? "—"
+                : `${postScore.score}/100`}
             </p>
           </div>
+
+          <div className="rounded-xl bg-slate-50 p-5">
+            <div className="flex items-center gap-2">
+              <TrendingUp
+                size={17}
+                className="text-primary"
+              />
+
+              <p className="text-sm font-semibold">
+                Perubahan Nilai
+              </p>
+            </div>
+
+            <p className="mt-2 text-2xl font-bold">
+              {improvement == null
+                ? "—"
+                : `${improvement > 0 ? "+" : ""}${improvement}`}
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-4 text-xs text-text-secondary">
+          Nilai hanya mencakup soal pilihan ganda.
+          Jawaban esai belum dinilai.
+        </p>
+
+        <div className="mt-7 space-y-5">
+          <AssessmentHistorySection
+            title="Asesmen Awal — Pre-Test"
+            submission={record.preTest}
+            questions={questions}
+          />
+
+          <AssessmentHistorySection
+            title="Asesmen Akhir — Post-Test"
+            submission={record.postTest}
+            questions={questions}
+          />
         </div>
       </section>
 
@@ -228,7 +487,8 @@ export default function LearningHistoryDetail() {
           Tingkat keyakinan:{" "}
           <span className="font-semibold text-text-primary">
             {confidence
-              ? confidenceLabels[confidence] ?? "Tidak diketahui"
+              ? confidenceLabels[confidence] ??
+                "Tidak diketahui"
               : "Tidak tersedia"}
           </span>
         </p>

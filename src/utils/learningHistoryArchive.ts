@@ -13,6 +13,10 @@ import {
   type LearningHistoryRecord,
 } from "./learningHistoryStorage";
 
+import {
+  loadAssessmentSnapshot,
+} from "./assessmentSnapshotStorage";
+
 export function archiveCompletedLearningCycle(): boolean {
   const learningSession = loadLearningSession();
   const assessmentSession = loadAssessmentSession();
@@ -51,6 +55,16 @@ export function archiveCompletedLearningCycle(): boolean {
     return false;
   }
 
+  // Load the frozen question bank used for this cycle.
+  const assessmentQuestions = loadAssessmentSnapshot();
+
+  // Do not archive without the question snapshot.
+  // This prevents incomplete historical assessment data.
+  if (!assessmentQuestions) {
+    return false;
+  }
+
+  // Create a complete history record.
   const historyRecord: LearningHistoryRecord = {
     id: learningSession.id,
     context: learningSession.context,
@@ -61,9 +75,15 @@ export function archiveCompletedLearningCycle(): boolean {
     startedAt: learningSession.startedAt,
     completedAt: assessmentSession.postTest.submittedAt,
 
+    // Assessment submissions.
     preTest: assessmentSession.preTest,
     postTest: assessmentSession.postTest,
 
+    // Preserve the questions and answer keys used
+    // during this specific learning cycle.
+    assessmentQuestions: structuredClone(assessmentQuestions),
+
+    // Student responses from all five learning phases.
     phaseOneResponse: learningSession.phaseOneResponse,
     phaseTwoResponse: learningSession.phaseTwoResponse,
     phaseThreeResponse: learningSession.phaseThreeResponse,
@@ -72,6 +92,8 @@ export function archiveCompletedLearningCycle(): boolean {
       learningSession.phaseFiveResponse ?? null,
   };
 
+  // Save the completed cycle into learning history.
+  // A storage failure will throw and prevent clearing.
   saveLearningHistoryRecord(historyRecord);
 
   // Only clear the active learning session

@@ -3,6 +3,7 @@ import type { LearningSessionData } from "./learningStorage";
 import type {
   AssessmentSubmission,
 } from "./assessmentStorage";
+import type { ManagedQuestion } from "./assessmentQuestionStorage";
 
 export type LearningHistoryStatus =
   | "COMPLETED"
@@ -22,6 +23,7 @@ export interface LearningHistoryRecord {
 
   preTest: AssessmentSubmission | null;
   postTest: AssessmentSubmission | null;
+  assessmentQuestions?: ManagedQuestion[] | null;
 
   phaseOneResponse: LearningSessionData["phaseOneResponse"];
   phaseTwoResponse: LearningSessionData["phaseTwoResponse"];

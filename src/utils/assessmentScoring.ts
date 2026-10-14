@@ -3,6 +3,10 @@ import type {
   AssessmentSubmission,
 } from "./assessmentStorage";
 
+import type {
+  ManagedQuestion,
+} from "./assessmentQuestionStorage";
+
 import {
   loadAssessmentSnapshot,
 } from "./assessmentSnapshotStorage";
@@ -23,9 +27,13 @@ export type AssessmentScore = {
 };
 
 export function calculateAssessmentScore(
-  submission: AssessmentSubmission
+  submission: AssessmentSubmission,
+  questionSnapshot?: ManagedQuestion[]
 ): AssessmentScore {
-  const questions = loadAssessmentSnapshot() ?? [];
+  // Use the provided historical snapshot when available.
+  // Otherwise, use the current assessment snapshot.
+  const questions =
+    questionSnapshot ?? loadAssessmentSnapshot() ?? [];
 
   const multipleChoiceQuestions = questions.filter(
     (question) => question.type === "MULTIPLE_CHOICE"
@@ -41,7 +49,8 @@ export function calculateAssessmentScore(
         (answer) => answer.questionId === question.id
       );
 
-      const selectedAnswer = submittedAnswer?.answer ?? null;
+      const selectedAnswer =
+        submittedAnswer?.answer ?? null;
 
       return {
         questionId: question.id,

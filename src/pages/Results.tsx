@@ -1,5 +1,6 @@
 
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+
 import {
   ArrowRight,
   BookOpen,
@@ -10,28 +11,85 @@ import {
 } from "lucide-react";
 
 import { loadAssessmentSession } from "../utils/assessmentStorage";
-import { calculateAssessmentScore } from "../utils/assessmentScoring";
+
+import {
+  calculateAssessmentScore,
+} from "../utils/assessmentScoring";
+
+import {
+  loadAssessmentSnapshot,
+} from "../utils/assessmentSnapshotStorage";
+
+import {
+  loadLearningHistory,
+} from "../utils/learningHistoryStorage";
 
 export default function Results() {
+  const location = useLocation();
+
+  const navigationState = location.state as {
+    context?: string | null;
+  } | null;
+
   const assessments = loadAssessmentSession();
+  const history = loadLearningHistory();
 
-  const preTest = assessments.preTest
-    ? calculateAssessmentScore(assessments.preTest)
+  // Find the completed record matching the latest post-test.
+  // This avoids showing results from a different learning cycle.
+  const latestPostTest = assessments.postTest;
+
+  const completedRecord = latestPostTest
+    ? history.find(
+        (record) =>
+          record.status === "COMPLETED" &&
+          record.postTest?.submittedAt ===
+            latestPostTest.submittedAt &&
+          record.context === latestPostTest.context
+      )
     : null;
 
-  const postTest = assessments.postTest
-    ? calculateAssessmentScore(assessments.postTest)
-    : null;
+  // Prefer the archived submissions when a matching
+  // completed learning record is available.
+  const preSubmission =
+    completedRecord?.preTest ?? assessments.preTest;
+
+  const postSubmission =
+    completedRecord?.postTest ?? assessments.postTest;
+
+  // Historical results must use their own frozen snapshot.
+  // Never use the current snapshot for archived records
+  // that do not have one.
+  const questions = completedRecord
+    ? completedRecord.assessmentQuestions ?? null
+    : loadAssessmentSnapshot();
+
+  const preTest =
+    preSubmission && questions
+      ? calculateAssessmentScore(preSubmission, questions)
+      : null;
+
+  const postTest =
+    postSubmission && questions
+      ? calculateAssessmentScore(postSubmission, questions)
+      : null;
 
   const canCompare =
-    preTest?.score != null && postTest?.score != null;
+    preTest?.score != null &&
+    postTest?.score != null;
 
   const improvement = canCompare
     ? postTest.score! - preTest.score!
     : null;
 
-  const formatScore = (score: number | null | undefined) =>
-    score == null ? "—" : `${score}`;
+  const formatScore = (
+    score: number | null | undefined
+  ) => (score == null ? "—" : `${score}`);
+
+  const hasAnyAssessment =
+    Boolean(preSubmission) || Boolean(postSubmission);
+
+  const snapshotUnavailable =
+    hasAnyAssessment && !questions;
 
   return (
     <div className="mx-auto max-w-6xl space-y-7">
@@ -52,7 +110,7 @@ export default function Results() {
         </p>
       </div>
 
-      {!assessments.preTest && !assessments.postTest ? (
+      {!hasAnyAssessment ? (
         <div className="rounded-2xl border border-border bg-white p-10 text-center">
           <BookOpen
             size={42}
@@ -78,6 +136,17 @@ export default function Results() {
         </div>
       ) : (
         <>
+          {/* Snapshot warning */}
+          {snapshotUnavailable && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+              <p className="text-sm leading-relaxed text-amber-800">
+                Data soal asesmen tidak tersedia.
+                Nilai tidak dapat dihitung secara akurat.
+                Jawaban asesmen tetap tersimpan.
+              </p>
+            </div>
+          )}
+
           {/* Score cards */}
           <div className="grid gap-5 md:grid-cols-3">
             <div className="rounded-2xl border border-border bg-white p-6">
@@ -95,7 +164,9 @@ export default function Results() {
               <p className="mt-3 text-sm text-text-secondary">
                 {preTest
                   ? `${preTest.correctAnswers} dari ${preTest.totalQuestions} benar`
-                  : "Belum dikerjakan"}
+                  : preSubmission
+                    ? "Nilai belum tersedia"
+                    : "Belum dikerjakan"}
               </p>
             </div>
 
@@ -114,7 +185,9 @@ export default function Results() {
               <p className="mt-3 text-sm text-text-secondary">
                 {postTest
                   ? `${postTest.correctAnswers} dari ${postTest.totalQuestions} benar`
-                  : "Belum dikerjakan"}
+                  : postSubmission
+                    ? "Nilai belum tersedia"
+                    : "Belum dikerjakan"}
               </p>
             </div>
 
@@ -123,7 +196,11 @@ export default function Results() {
                 <p className="text-sm font-medium text-text-secondary">
                   Perubahan Nilai Pilihan Ganda
                 </p>
-                <TrendingUp size={20} className="text-primary" />
+
+                <TrendingUp
+                  size={20}
+                  className="text-primary"
+                />
               </div>
 
               <p className="mt-3 text-4xl font-bold">
@@ -134,7 +211,7 @@ export default function Results() {
 
               <p className="mt-3 text-sm text-text-secondary">
                 {improvement === null
-                  ? "Menunggu kedua asesmen"
+                  ? "Perbandingan belum tersedia"
                   : improvement > 0
                     ? "Nilai pilihan ganda meningkat"
                     : improvement < 0
@@ -171,6 +248,7 @@ export default function Results() {
                     <p className="text-sm font-semibold">
                       {item.label}
                     </p>
+
                     <p className="text-sm font-bold">
                       {item.score === null
                         ? "Belum tersedia"
@@ -208,9 +286,11 @@ export default function Results() {
                   <p className="font-semibold">
                     Pilihan Ganda
                   </p>
+
                   <p className="mt-1 text-sm text-text-secondary">
                     Jawaban pilihan ganda dinilai
-                    menggunakan kunci jawaban.
+                    menggunakan kunci jawaban apabila
+                    data soal tersedia.
                   </p>
                 </div>
               </div>
@@ -225,6 +305,7 @@ export default function Results() {
                   <p className="font-semibold">
                     Jawaban Esai — Menunggu Evaluasi
                   </p>
+
                   <p className="mt-1 text-sm text-text-secondary">
                     Jawaban esai belum dinilai.
                     Evaluasi berbasis rubrik akan
@@ -248,6 +329,9 @@ export default function Results() {
           <div className="flex justify-end">
             <Link
               to="/dashboard"
+              state={{
+                context: navigationState?.context ?? null,
+              }}
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-white hover:bg-blue-700"
             >
               Kembali ke Dashboard
