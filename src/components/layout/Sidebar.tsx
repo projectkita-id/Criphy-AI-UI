@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 
 import {
@@ -9,6 +8,7 @@ import {
   LayoutDashboard,
   LoaderCircle,
   LogOut,
+  UserRound,
 } from "lucide-react";
 
 import {
@@ -24,6 +24,11 @@ const navigation = [
     label: "Dashboard",
     path: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    label: "Profil Saya",
+    path: "/profile",
+    icon: UserRound,
   },
   {
     label: "Mulai Belajar",

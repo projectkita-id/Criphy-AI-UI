@@ -21,6 +21,7 @@ import LearningSession from "./pages/LearningSession";
 import Results from "./pages/Results";
 import LearningHistory from "./pages/LearningHistory";
 import LearningHistoryDetail from "./pages/LearningHistoryDetail";
+import Profile from "./pages/Profile";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AssessmentManagement from "./pages/admin/AssessmentManagement";
@@ -73,6 +74,8 @@ export default function App() {
               />
 
               <Route path="/results" element={<Results />} />
+
+              <Route path="/profile" element={<Profile />} />
             </Route>
           </Route>
 
