@@ -1,5 +1,6 @@
+import { useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 
-import { NavLink } from "react-router-dom";
 import {
   BarChart3,
   BookOpen,
@@ -7,10 +8,14 @@ import {
   ClipboardList,
   GraduationCap,
   LayoutDashboard,
+  LoaderCircle,
+  LogOut,
   Settings2,
   Users,
   X,
 } from "lucide-react";
+
+import { useAuth } from "../../contexts/AuthContext";
 
 type Props = {
   mobileOpen: boolean;
@@ -60,6 +65,34 @@ export default function AdminSidebar({
   mobileOpen,
   onClose,
 }: Props) {
+  const navigate = useNavigate();
+  const { user, logoutUser } = useAuth();
+
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+
+  async function handleLogout() {
+    if (loggingOut) return;
+
+    setLoggingOut(true);
+    setLogoutError("");
+
+    try {
+      await logoutUser();
+
+      onClose();
+      navigate("/login", { replace: true });
+    } catch (err) {
+      setLogoutError(
+        err instanceof Error
+          ? err.message
+          : "Gagal keluar dari akun."
+      );
+    } finally {
+      setLoggingOut(false);
+    }
+  }
+
   return (
     <>
       {mobileOpen && (
@@ -79,6 +112,7 @@ export default function AdminSidebar({
             : "-translate-x-full"
         }`}
       >
+        {/* Branding */}
         <div className="flex h-20 shrink-0 items-center justify-between border-b border-border px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white">
@@ -89,6 +123,7 @@ export default function AdminSidebar({
               <h1 className="text-lg font-bold text-primary-dark">
                 CRI-PHY AI
               </h1>
+
               <p className="text-xs text-text-secondary">
                 Administrator
               </p>
@@ -105,6 +140,7 @@ export default function AdminSidebar({
           </button>
         </div>
 
+        {/* Navigation */}
         <nav
           aria-label="Navigasi administrator"
           className="flex-1 space-y-1 overflow-y-auto px-4 py-6"
@@ -133,15 +169,48 @@ export default function AdminSidebar({
           })}
         </nav>
 
+        {/* Account & Logout */}
         <div className="shrink-0 border-t border-border p-4">
-          <div className="rounded-xl bg-slate-50 p-4">
-            <p className="text-sm font-semibold">
-              Mode Administrator
+          <div className="mb-3 rounded-xl bg-slate-50 p-4">
+            <p className="truncate text-sm font-semibold text-text-primary">
+              {user?.name ?? "Administrator"}
             </p>
-            <p className="mt-1 text-xs text-text-secondary">
-              Antarmuka demo tanpa autentikasi.
+
+            <p className="mt-1 truncate text-xs text-text-secondary">
+              {user?.email ?? ""}
+            </p>
+
+            <p className="mt-2 text-xs font-medium text-primary">
+              Administrator
             </p>
           </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loggingOut ? (
+              <LoaderCircle
+                size={19}
+                className="animate-spin"
+              />
+            ) : (
+              <LogOut size={19} />
+            )}
+
+            {loggingOut ? "Keluar..." : "Keluar"}
+          </button>
+
+          {logoutError && (
+            <p
+              role="alert"
+              className="mt-2 px-2 text-xs text-red-600"
+            >
+              {logoutError}
+            </p>
+          )}
         </div>
       </aside>
     </>

@@ -1,17 +1,23 @@
 
+import { useState } from "react";
+
 import {
   BookOpen,
   ChartNoAxesColumnIncreasing,
   GraduationCap,
   History,
   LayoutDashboard,
+  LoaderCircle,
   LogOut,
 } from "lucide-react";
 
 import {
   NavLink,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
+
+import { useAuth } from "../../contexts/AuthContext";
 
 const navigation = [
   {
@@ -38,6 +44,12 @@ const navigation = [
 
 export default function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const { user, logoutUser } = useAuth();
+
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
 
   const isNavigationActive = (path: string) => {
     if (path === "/learn") {
@@ -52,6 +64,27 @@ export default function Sidebar() {
       location.pathname.startsWith(`${path}/`)
     );
   };
+
+  async function handleLogout() {
+    if (loggingOut) return;
+
+    setLoggingOut(true);
+    setLogoutError("");
+
+    try {
+      await logoutUser();
+
+      navigate("/login", { replace: true });
+    } catch (err) {
+      setLogoutError(
+        err instanceof Error
+          ? err.message
+          : "Gagal keluar dari akun."
+      );
+    } finally {
+      setLoggingOut(false);
+    }
+  }
 
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-border bg-white">
@@ -104,18 +137,44 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Logout placeholder */}
+      {/* Account & Logout */}
       <div className="border-t border-border p-4">
+        <div className="mb-3 rounded-xl bg-slate-50 p-4">
+          <p className="truncate text-sm font-semibold text-text-primary">
+            {user?.name ?? "Siswa"}
+          </p>
+
+          <p className="mt-1 truncate text-xs text-text-secondary">
+            {user?.email ?? ""}
+          </p>
+        </div>
+
         <button
           type="button"
-          disabled
-          title="Logout akan tersedia setelah autentikasi dibuat"
-          className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-4 py-3 text-sm text-text-secondary opacity-50"
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <LogOut size={19} />
+          {loggingOut ? (
+            <LoaderCircle
+              size={19}
+              className="animate-spin"
+            />
+          ) : (
+            <LogOut size={19} />
+          )}
 
-          Keluar
+          {loggingOut ? "Keluar..." : "Keluar"}
         </button>
+
+        {logoutError && (
+          <p
+            role="alert"
+            className="mt-2 px-2 text-xs text-red-600"
+          >
+            {logoutError}
+          </p>
+        )}
       </div>
     </aside>
   );

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { login } from "../services/auth";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { setUser } = useAuth();
 
     const location = useLocation();
 
@@ -41,6 +43,8 @@ export default function Login() {
 
     try {
       const user = await login(email.trim(), password);
+
+      setUser(user);
 
       navigate(
         user.role === "ADMIN" ? "/admin" : "/dashboard",

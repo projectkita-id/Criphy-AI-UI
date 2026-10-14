@@ -119,3 +119,57 @@ export async function register(
 
   return result.data;
 }
+
+export async function getCurrentUser(): Promise<AuthUser | null> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_URL}/auth/me`, {
+      method: "GET",
+      credentials: "include",
+    });
+  } catch {
+    throw new Error(
+      "Tidak dapat terhubung ke server. Silakan coba lagi."
+    );
+  }
+
+  if (response.status === 401) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      "Gagal memeriksa sesi pengguna."
+    );
+  }
+
+  const result: ApiResponse<AuthUser> = await response.json();
+
+  if (!result.success || !result.data) {
+    throw new Error("Respons sesi pengguna tidak valid.");
+  }
+
+  return result.data;
+}
+
+export async function logout(): Promise<void> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_URL}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+  } catch {
+    throw new Error(
+      "Tidak dapat terhubung ke server. Silakan coba lagi."
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      "Gagal keluar dari akun. Silakan coba lagi."
+    );
+  }
+}
