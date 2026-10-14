@@ -1,4 +1,3 @@
-
 import {
   BrowserRouter,
   Navigate,
@@ -9,12 +8,16 @@ import {
 import StudentLayout from "./layouts/StudentLayout";
 import AdminLayout from "./layouts/AdminLayout";
 
-// import PlaceholderPage from "./pages/PlaceholderPage";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+
 import Dashboard from "./pages/Dashboard";
 import ContextSelection from "./pages/ContextSelection";
 import Assessment from "./pages/Assessment";
 import LearningSession from "./pages/LearningSession";
 import Results from "./pages/Results";
+import LearningHistory from "./pages/LearningHistory";
+import LearningHistoryDetail from "./pages/LearningHistoryDetail";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AssessmentManagement from "./pages/admin/AssessmentManagement";
@@ -24,13 +27,15 @@ import StudentManagement from "./pages/admin/StudentManagement";
 import StudentDetail from "./pages/admin/StudentDetail";
 import MonitoringDashboard from "./pages/admin/MonitoringDashboard";
 import AdminSettings from "./pages/admin/AdminSettings";
-import LearningHistory from "./pages/LearningHistory";
-import LearningHistoryDetail from "./pages/LearningHistoryDetail";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public authentication routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
         {/* Student routes */}
         <Route element={<StudentLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
@@ -41,8 +46,8 @@ export default function App() {
             path="/learn/pre-test"
             element={<Assessment type="pre-test" />}
           />
-          <Route
 
+          <Route
             path="/learn/session"
             element={<LearningSession />}
           />
