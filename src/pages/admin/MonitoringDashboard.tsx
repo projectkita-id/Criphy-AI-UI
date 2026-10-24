@@ -83,14 +83,7 @@ export default function MonitoringDashboard() {
         </p>
       </div>
 
-      {/* Demo notice */}
-      <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-        Mode demo: seluruh statistik dan aktivitas
-        menggunakan data ilustratif. Belum terhubung
-        dengan database atau aktivitas siswa nyata.
-      </div>
-
-      {/* Filters */}
+          {/* Filters */}
       <section className="rounded-2xl border border-border bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h2 className="font-semibold">

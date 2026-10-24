@@ -12,28 +12,32 @@ import {
   Users,
 } from "lucide-react";
 
+import { demoStudents } from "../../data/students";
+import { demoStudentLearningHistory } from "../../data/studentLearningHistory";
+import { demoCaseStudies } from "../../data/caseStudies";
+
 const statistics = [
   {
     label: "Total Siswa",
-    value: 0,
+    value: demoStudents.length,
     description: "Siswa terdaftar",
     icon: Users,
   },
   {
     label: "Sesi Pembelajaran",
-    value: 0,
+    value: demoStudentLearningHistory.length,
     description: "Total sesi pembelajaran",
     icon: BookOpen,
   },
   {
     label: "Asesmen Selesai",
-    value: 0,
+    value: demoStudentLearningHistory.filter((session) => session.status === "COMPLETED").length,
     description: "Asesmen yang telah diselesaikan",
     icon: ClipboardCheck,
   },
   {
     label: "Studi Kasus",
-    value: 0,
+    value: demoCaseStudies.length,
     description: "Studi kasus tersedia",
     icon: FileText,
   },
@@ -83,19 +87,6 @@ export default function AdminDashboard() {
         <p className="mt-2 text-text-secondary">
           Pantau aktivitas pembelajaran dan kelola
           platform CRI-PHY AI.
-        </p>
-      </div>
-
-      {/* Demo Notice */}
-      <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
-        <p className="text-sm font-semibold text-blue-900">
-          Mode Demonstrasi
-        </p>
-
-        <p className="mt-1 text-sm leading-relaxed text-blue-800">
-          Dashboard saat ini menggunakan tampilan demo.
-          Statistik dan aktivitas akan terhubung dengan
-          database setelah backend tersedia.
         </p>
       </div>
 

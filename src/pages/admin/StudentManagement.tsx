@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -7,15 +7,56 @@ import StudentStats from "../../components/admin/students/StudentStats";
 import StudentTable from "../../components/admin/students/StudentTable";
 
 import {
-  demoStudents,
   type Student,
   type StudentStatus,
 } from "../../data/students";
+import { listStudents } from "../../services/api";
 
 type StatusFilter = StudentStatus | "ALL";
 
 export default function StudentManagement() {
-  const [students] = useState<Student[]>(demoStudents);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadStudents = async () => {
+      try {
+        const data = await listStudents();
+
+        if (!isMounted) return;
+
+        const mappedStudents: Student[] = data.map((item) => ({
+          id: item.id,
+          name: item.name,
+          email: item.email,
+          className: "Belum diatur",
+          status: "ACTIVE",
+          completedSessions: 0,
+          averageScore: null,
+          lastActivity: item.updatedAt ?? item.createdAt ?? null,
+        }));
+
+        setStudents(mappedStudents);
+      } catch (error) {
+        console.error("Failed to fetch students:", error);
+        if (isMounted) {
+          setStudents([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadStudents();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
@@ -45,9 +86,9 @@ export default function StudentManagement() {
     return matchesSearch && matchesStatus && matchesClass;
   });
 
-    const handleView = (student: Student) => {
+  const handleView = (student: Student) => {
     navigate(`/admin/students/${student.id}`);
-    };
+  };
 
   const handleResetFilters = () => {
     setSearch("");
@@ -78,14 +119,14 @@ export default function StudentManagement() {
         </p>
       </div>
 
-      {/* Demo Notice */}
-      <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-        Mode demo: seluruh data siswa dan statistik bersifat
-        ilustratif. Belum terhubung ke akun siswa atau database.
-      </div>
-
-      {/* Statistics */}
+          {/* Statistics */}
       <StudentStats students={students} />
+
+      {loading && (
+        <div className="rounded-2xl border border-border bg-white p-5 text-sm text-text-secondary">
+          Memuat daftar siswa dari database...
+        </div>
+      )}
 
       {/* Filters */}
       <section className="rounded-2xl border border-border bg-white p-5">

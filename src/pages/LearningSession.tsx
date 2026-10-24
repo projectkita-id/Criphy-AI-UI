@@ -31,14 +31,13 @@ import { loadCaseStudies } from "../utils/caseStudyStorage";
 
 import { isSupportedLearningCase } from "../data/supportedLearningCases";
 
-import { demoLearningContent } from "../data/demoLearningContent";
-
 import type {
   CaseStudy as CaseStudyData,
   CaseStudyContext,
 } from "../data/caseStudies";
 
 import AICasePreparation from "../components/learning/AICasePreparation";
+import PhaseWaitingScreen from "../components/learning/PhaseWaitingScreen";
 
 import {
   createIdleAIState,
@@ -93,6 +92,83 @@ function createInitialSession(
   };
 }
 
+const contextLabels: Record<string, string> = {
+  DAILY_LIFE: "Kehidupan Sehari-hari",
+  ENVIRONMENT: "Lingkungan",
+  TECHNOLOGY: "Teknologi",
+};
+
+function buildPhaseContent(
+  caseStudy: CaseStudyData | null | undefined,
+  context: string | null
+) {
+  const resolvedContext =
+    (context as CaseStudyContext | null) ??
+    caseStudy?.context ??
+    "DAILY_LIFE";
+
+  const caseTitle = caseStudy?.title ?? "Studi kasus pembelajaran";
+  const topic = caseStudy?.topic ?? "konsep utama";
+  const contextLabel =
+    contextLabels[resolvedContext] ?? "Konteks pembelajaran";
+
+  return {
+    phaseOne: {
+      question: `Berdasarkan ${caseTitle}, apa prediksi awalmu tentang ${topic}? Jelaskan alasanmu dan seberapa yakin kamu dengan jawaban tersebut.`,
+    },
+    phaseTwo: {
+      title: `Mengecek Prediksi Awal pada ${contextLabel}`,
+      scenario: `Pada ${caseTitle}, terdapat situasi yang bisa menantang prediksi awalmu. Perhatikan konteks ${contextLabel} dan bandingkan hasil pengamatanmu dengan dugaan yang sebelumnya kamu buat.`,
+      question: "Apakah prediksi awalmu masih konsisten dengan situasi yang kamu amati? Jelaskan mengapa ada kemungkinan yang sesuai atau bertentangan.",
+      hint: "Jangan langsung menganggap prediksi awal benar atau salah. Fokus pada bukti yang muncul dari situasi dan kemungkinan penjelasan lain yang masuk akal.",
+    },
+    phaseThree: {
+      title: `Investigasi Bukti untuk ${caseTitle}`,
+      description: `Gunakan data dan pengamatan berikut untuk menguji apakah prediksi awalmu masih sesuai dengan bukti yang tersedia dalam konteks ${contextLabel}.`,
+      data: [
+        { time: 0, carA: 18, carB: 12 },
+        { time: 1, carA: 18, carB: 15 },
+        { time: 2, carA: 18, carB: 19 },
+        { time: 3, carA: 18, carB: 23 },
+        { time: 4, carA: 18, carB: 27 },
+        { time: 5, carA: 18, carB: 31 },
+      ],
+      question: "Berbasis data di atas, apa yang bisa kamu simpulkan tentang perubahan kondisi yang terjadi? Gunakan bukti yang spesifik dan jelaskan alasanmu.",
+      hint: "Perhatikan perubahan dari satu waktu ke waktu berikutnya, bukan hanya nilai satu titik. Bandingkan pola perubahan tersebut dengan prediksi awalmu.",
+    },
+    phaseFour: {
+      title: "Menyusun Argumen Berdasarkan Bukti",
+      description: `Susun penjelasan ilmiah untuk ${caseTitle} dengan menggunakan klaim, bukti, dan penalaran yang relevan dalam konteks ${contextLabel}.`,
+      claim: {
+        label: "Claim — Klaim",
+        question: "Apa kesimpulan utama yang paling tepat berdasarkan bukti yang kamu lihat?",
+        placeholder: "Tuliskan kesimpulanmu secara ringkas...",
+        hint: "Klaim harus menjawab pertanyaan utama secara langsung dan tidak terlalu umum.",
+      },
+      evidence: {
+        label: "Evidence — Bukti",
+        question: "Bukti apa yang paling kuat mendukung klaimmu?",
+        placeholder: "Sebutkan data, pola, atau observasi yang relevan...",
+        hint: "Gunakan informasi spesifik yang dapat diamati dan diperiksa kembali.",
+      },
+      reasoning: {
+        label: "Reasoning — Penalaran",
+        question: "Bagaimana bukti itu menjelaskan hubungan sebab-akibat atau prinsip yang relevan?",
+        placeholder: "Jelaskan mengapa bukti itu mendukung klaimmu...",
+        hint: "Hubungkan bukti dengan konsep utama, bukan hanya menyebutkan datanya saja.",
+      },
+    },
+    phaseFive: {
+      title: "Refleksi Perubahan Pemahaman",
+      description: `Bandingkan prediksi awal dan pemahaman barumu untuk ${caseTitle}. Perubahan jawaban tidak selalu lebih baik, tetapi kualitas alasan dan bukti adalah yang paling penting.`,
+      understandingQuestion: "Setelah mengeksplorasi bukti, bagaimana pemahamanmu terhadap konsep ini berubah atau tetap sama?",
+      evidenceQuestion: "Bukti atau pengalaman apa yang paling memengaruhi perubahan atau penguatan pandanganmu?",
+      understandingPlaceholder: "Bandingkan pemahamanmu saat ini dengan prediksi awal...",
+      evidencePlaceholder: "Sebutkan bukti, pola, atau data yang paling berpengaruh...",
+    },
+  };
+}
+
 export default function LearningSession() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -100,6 +176,10 @@ export default function LearningSession() {
   const [aiState] = useState<
     AIServiceState<AIGeneratedCaseStudy>
   >(() => createIdleAIState<AIGeneratedCaseStudy>());
+
+  const [phaseStarted, setPhaseStarted] = useState<Record<number, boolean>>({
+    1: false,
+  });
 
   const navigationContext: string | null =
     (
@@ -113,9 +193,11 @@ export default function LearningSession() {
     () => {
       const saved = loadLearningSession();
 
-      // Phase 5 has finished.
-      // The student must complete the post-test.
-      if (saved?.status === "AWAITING_POST_TEST") {
+      // Only redirect to the final assessment after Phase 5 is actually completed.
+      if (
+        saved?.status === "AWAITING_POST_TEST" &&
+        saved.phaseFiveResponse
+      ) {
         return saved;
       }
 
@@ -166,6 +248,22 @@ export default function LearningSession() {
     saveLearningSession(session);
   }, [session]);
 
+  const activePhase =
+    (session.currentPhase && session.currentPhase >= 1 && session.currentPhase <= 5
+      ? session.currentPhase
+      : 1);
+
+  const hasStartedCurrentPhase = Boolean(
+    phaseStarted[activePhase]
+  );
+
+  const handleStartCurrentPhase = () => {
+    setPhaseStarted((previous) => ({
+      ...previous,
+      [activePhase]: true,
+    }));
+  };
+
   // Redirect students to the post-test after Phase 5.
   useEffect(() => {
     if (session.status === "AWAITING_POST_TEST") {
@@ -180,10 +278,15 @@ export default function LearningSession() {
   const updateSession = (
     updates: Partial<LearningSessionData>
   ) => {
-    setSession((previous) => ({
-      ...previous,
-      ...updates,
-    }));
+    setSession((previous) => {
+      const nextSession = {
+        ...previous,
+        ...updates,
+      };
+
+      saveLearningSession(nextSession);
+      return nextSession;
+    });
   };
 
   // Phase 1 → Phase 2
@@ -246,6 +349,28 @@ export default function LearningSession() {
     }
   };
 
+  const phaseContent = buildPhaseContent(
+    session.caseStudy,
+    session.context
+  );
+
+  const currentPhaseMeta =
+    session.currentPhase >= 1 && session.currentPhase <= 5
+      ? (
+          [
+            { id: 1, title: "Activation of Prior Conceptions", description: "Menentukan prediksi awal dan keyakinanmu sebelum eksplorasi lebih lanjut." },
+            { id: 2, title: "Cognitive Conflict", description: "Mengurai perbedaan antara prediksi awal dan situasi yang diamati." },
+            { id: 3, title: "Evidence Investigation", description: "Menganalisis pola data dan bukti untuk membangun penjelasan yang kuat." },
+            { id: 4, title: "Concept Reconstruction", description: "Menyusun klaim, bukti, dan alasan sebagai argumen ilmiah." },
+            { id: 5, title: "Reflection and Evaluation", description: "Mengevaluasi perubahan pemahaman dan kualitas penalaran." },
+          ] as const
+        )[session.currentPhase - 1]
+      : {
+          id: 1,
+          title: "Activation of Prior Conceptions",
+          description: "Menentukan prediksi awal dan keyakinanmu sebelum eksplorasi lebih lanjut.",
+        };
+
   // Display AI preparation if no supported case exists.
   if (!session.caseStudy) {
     const validContext: CaseStudyContext | null =
@@ -293,40 +418,52 @@ export default function LearningSession() {
       {/* Selected supported case */}
       <CaseStudy caseStudy={session.caseStudy} />
 
+      {!hasStartedCurrentPhase && (
+        <PhaseWaitingScreen
+          phaseNumber={session.currentPhase}
+          title={currentPhaseMeta.title}
+          description={currentPhaseMeta.description}
+          onStart={handleStartCurrentPhase}
+        />
+      )}
+
       {/* Phase 1: Aktivasi Konsepsi Awal */}
-      {session.currentPhase === 1 && (
+      {session.currentPhase === 1 && hasStartedCurrentPhase && (
         <PhaseOne
-          question={demoLearningContent.phaseOne.question}
+          question={phaseContent.phaseOne.question}
           onComplete={handlePhaseOneComplete}
         />
       )}
 
       {/* Phase 2: Konflik Kognitif */}
       {session.currentPhase === 2 &&
-        session.phaseOneResponse && (
+        session.phaseOneResponse &&
+        hasStartedCurrentPhase && (
           <PhaseTwo
             initialAnswer={session.phaseOneResponse.answer}
-            content={demoLearningContent.phaseTwo}
+            content={phaseContent.phaseTwo}
             onComplete={handlePhaseTwoComplete}
           />
         )}
 
       {/* Phase 3: Investigasi Berbasis Bukti */}
       {session.currentPhase === 3 &&
-        session.phaseTwoResponse !== null && (
+        session.phaseTwoResponse !== null &&
+        hasStartedCurrentPhase && (
           <PhaseThree
             previousAnswer={session.phaseTwoResponse}
-            content={demoLearningContent.phaseThree}
+            content={phaseContent.phaseThree}
             onComplete={handlePhaseThreeComplete}
           />
         )}
 
       {/* Phase 4: Rekonstruksi Konsep */}
       {session.currentPhase === 4 &&
-        session.phaseThreeResponse !== null && (
+        session.phaseThreeResponse !== null &&
+        hasStartedCurrentPhase && (
           <PhaseFour
             previousAnswer={session.phaseThreeResponse}
-            content={demoLearningContent.phaseFour}
+            content={phaseContent.phaseFour}
             onComplete={handlePhaseFourComplete}
           />
         )}
@@ -334,11 +471,12 @@ export default function LearningSession() {
       {/* Phase 5: Refleksi dan Evaluasi */}
       {session.currentPhase === 5 &&
         session.phaseOneResponse &&
-        session.phaseFourResponse && (
+        session.phaseFourResponse &&
+        hasStartedCurrentPhase && (
           <PhaseFive
             initialResponse={session.phaseOneResponse}
             reconstructionResponse={session.phaseFourResponse}
-            content={demoLearningContent.phaseFive}
+            content={phaseContent.phaseFive}
             onComplete={handlePhaseFiveComplete}
           />
         )}

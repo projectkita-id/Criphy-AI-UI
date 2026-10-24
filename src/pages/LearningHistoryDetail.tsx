@@ -1,6 +1,6 @@
 
 import { Link, useParams } from "react-router-dom";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import {
   ArrowLeft,
@@ -15,7 +15,13 @@ import {
 } from "lucide-react";
 
 import {
+  fetchStudentLearningHistory,
+  type StudentLearningHistoryRecord,
+} from "../services/api";
+
+import {
   getLearningHistoryRecord,
+  type LearningHistoryRecord,
 } from "../utils/learningHistoryStorage";
 
 import {
@@ -284,11 +290,42 @@ function AssessmentHistorySection({
   );
 }
 
+function normalizeHistoryRecord(
+  record: StudentLearningHistoryRecord
+): LearningHistoryRecord {
+  return {
+    ...record,
+    caseStudy: {
+      ...(record.caseStudy ?? {}),
+      id: record.caseStudy?.id ?? record.id,
+      title: record.caseStudy?.title ?? "Studi Kasus",
+      context: record.caseStudy?.context ?? record.context,
+      topic: record.caseStudy?.topic ?? null,
+      description: record.caseStudy?.description ?? null,
+      status: "VALIDATED",
+      createdAt: record.startedAt,
+    } as unknown as LearningHistoryRecord["caseStudy"],
+    phaseOneResponse: record.phaseOneResponse as unknown as LearningHistoryRecord["phaseOneResponse"],
+    phaseTwoResponse: record.phaseTwoResponse as unknown as LearningHistoryRecord["phaseTwoResponse"],
+    phaseThreeResponse: record.phaseThreeResponse as unknown as LearningHistoryRecord["phaseThreeResponse"],
+    phaseFourResponse: record.phaseFourResponse as unknown as LearningHistoryRecord["phaseFourResponse"],
+    phaseFiveResponse: record.phaseFiveResponse as unknown as LearningHistoryRecord["phaseFiveResponse"],
+    assessmentQuestions: null,
+  };
+}
+
 export default function LearningHistoryDetail() {
   const { historyId } = useParams<{ historyId: string }>();
+  const [backendRecords, setBackendRecords] = useState<LearningHistoryRecord[]>([]);
+
+  useEffect(() => {
+    fetchStudentLearningHistory()
+      .then((records) => setBackendRecords(records.map(normalizeHistoryRecord)))
+      .catch(() => setBackendRecords([]));
+  }, []);
 
   const record = historyId
-    ? getLearningHistoryRecord(historyId)
+    ? backendRecords.find((item) => item.id === historyId) ?? getLearningHistoryRecord(historyId)
     : null;
 
   if (!record) {
@@ -325,6 +362,16 @@ export default function LearningHistoryDetail() {
   };
 
   const confidence = record.phaseOneResponse?.confidence;
+
+  const progressItems = [
+    { label: "Pre-Test", done: Boolean(record.preTest) },
+    { label: "Fase 1 — Aktivasi Konsepsi Awal", done: Boolean(record.phaseOneResponse) },
+    { label: "Fase 2 — Konflik Kognitif", done: Boolean(record.phaseTwoResponse) },
+    { label: "Fase 3 — Investigasi Berbasis Bukti", done: Boolean(record.phaseThreeResponse) },
+    { label: "Fase 4 — Rekonstruksi Konsep", done: Boolean(record.phaseFourResponse) },
+    { label: "Fase 5 — Refleksi dan Evaluasi", done: Boolean(record.phaseFiveResponse) },
+    { label: "Post-Test", done: Boolean(record.postTest) },
+  ];
 
   const questions = record.assessmentQuestions ?? null;
 
@@ -389,6 +436,42 @@ export default function LearningHistoryDetail() {
           </span>
         </div>
       </div>
+
+      <section className="rounded-2xl border border-border bg-white p-6">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 size={20} className="text-primary" />
+          <h2 className="text-lg font-bold">Progress Pengerjaan</h2>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          {progressItems.map((item) => (
+            <div
+              key={item.label}
+              className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-3"
+            >
+              <span
+                className={
+                  item.done
+                    ? "flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700"
+                    : "flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-500"
+                }
+              >
+                {item.done ? "✓" : "•"}
+              </span>
+
+              <span
+                className={
+                  item.done
+                    ? "font-medium text-text-primary"
+                    : "text-text-secondary"
+                }
+              >
+                {item.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* Assessment history */}
       <section className="rounded-2xl border border-border bg-white p-6">

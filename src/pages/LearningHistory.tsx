@@ -1,4 +1,5 @@
 
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import {
@@ -6,9 +7,13 @@ import {
   BookOpen,
   CalendarDays,
   CheckCircle2,
-  ClipboardList,
   History,
 } from "lucide-react";
+
+import {
+  fetchStudentLearningHistory,
+  type StudentLearningHistoryRecord,
+} from "../services/api";
 
 import {
   loadLearningHistory,
@@ -54,12 +59,26 @@ function formatDate(date: string | null): string {
   }).format(parsed);
 }
 
+function getProgressItems(record: LearningHistoryRecord) {
+  return [
+    { label: "Pre-Test", done: Boolean(record.preTest) },
+    { label: "Fase 1 — Aktivasi Konsepsi Awal", done: Boolean(record.phaseOneResponse) },
+    { label: "Fase 2 — Konflik Kognitif", done: Boolean(record.phaseTwoResponse) },
+    { label: "Fase 3 — Investigasi Berbasis Bukti", done: Boolean(record.phaseThreeResponse) },
+    { label: "Fase 4 — Rekonstruksi Konsep", done: Boolean(record.phaseFourResponse) },
+    { label: "Fase 5 — Refleksi dan Evaluasi", done: Boolean(record.phaseFiveResponse) },
+    { label: "Post-Test", done: Boolean(record.postTest) },
+  ];
+}
+
 // Display a single learning history record.
 function HistoryCard({
   record,
 }: {
   record: LearningHistoryRecord;
 }) {
+  const progressItems = getProgressItems(record);
+
   return (
     <div className="rounded-2xl border border-border bg-white p-6">
       {/* Case information */}
@@ -135,19 +154,39 @@ function HistoryCard({
         </div>
       </div>
 
-      {/* Assessment indicators */}
-      <div className="mt-5 flex flex-wrap gap-3">
-        <span className="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-medium text-text-secondary">
-          <ClipboardList size={15} />
-          Asesmen Awal:{" "}
-          {record.preTest ? "Tersimpan" : "Belum Ada"}
-        </span>
+      <div className="mt-5 rounded-xl border border-border bg-slate-50 p-4">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          Progress Pengerjaan
+        </p>
 
-        <span className="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-medium text-text-secondary">
-          <ClipboardList size={15} />
-          Asesmen Akhir:{" "}
-          {record.postTest ? "Tersimpan" : "Belum Ada"}
-        </span>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {progressItems.map((item) => (
+            <div
+              key={item.label}
+              className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm"
+            >
+              <span
+                className={
+                  item.done
+                    ? "flex h-5 w-5 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700"
+                    : "flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-500"
+                }
+              >
+                {item.done ? "✓" : "•"}
+              </span>
+
+              <span
+                className={
+                  item.done
+                    ? "font-medium text-text-primary"
+                    : "text-text-secondary"
+                }
+              >
+                {item.label}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Navigate to the history details page */}
@@ -164,11 +203,65 @@ function HistoryCard({
   );
 }
 
+function normalizeHistoryRecord(
+  record: StudentLearningHistoryRecord
+): LearningHistoryRecord {
+  return {
+    ...record,
+    caseStudy: {
+      ...(record.caseStudy ?? {}),
+      id: record.caseStudy?.id ?? record.id,
+      title: record.caseStudy?.title ?? "Studi Kasus",
+      context: record.caseStudy?.context ?? record.context,
+      topic: record.caseStudy?.topic ?? null,
+      description: record.caseStudy?.description ?? null,
+      status: "VALIDATED",
+      createdAt: record.startedAt,
+    } as unknown as LearningHistoryRecord["caseStudy"],
+    phaseOneResponse: record.phaseOneResponse as unknown as LearningHistoryRecord["phaseOneResponse"],
+    phaseTwoResponse: record.phaseTwoResponse as unknown as LearningHistoryRecord["phaseTwoResponse"],
+    phaseThreeResponse: record.phaseThreeResponse as unknown as LearningHistoryRecord["phaseThreeResponse"],
+    phaseFourResponse: record.phaseFourResponse as unknown as LearningHistoryRecord["phaseFourResponse"],
+    phaseFiveResponse: record.phaseFiveResponse as unknown as LearningHistoryRecord["phaseFiveResponse"],
+    assessmentQuestions: null,
+  };
+}
+
 export default function LearningHistory() {
   const navigate = useNavigate();
+  const [backendHistory, setBackendHistory] = useState<LearningHistoryRecord[]>([]);
+  const [hasFetchedHistory, setHasFetchedHistory] = useState(false);
 
-  // Read actual saved learning history from localStorage.
-  const history = loadLearningHistory();
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchStudentLearningHistory()
+      .then((records) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setBackendHistory(records.map(normalizeHistoryRecord));
+        setHasFetchedHistory(true);
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setBackendHistory([]);
+        setHasFetchedHistory(true);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const history =
+    hasFetchedHistory && backendHistory.length > 0
+      ? backendHistory
+      : loadLearningHistory();
 
   const completedCount = history.filter(
     (record) => record.status === "COMPLETED"

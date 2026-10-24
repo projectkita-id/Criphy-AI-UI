@@ -15,17 +15,37 @@ type Props = {
   onComplete: (answer: string) => void;
 };
 
+const phaseQuestions = [
+  "Apa yang paling menantang dari prediksi awalmu dalam situasi ini?",
+  "Bukti apa yang terlihat dari studi kasus yang bertentangan dengan prediksi awalmu?",
+  "Bagaimana kamu membedakan antara yang kamu pikirkan dan yang benar-benar tampak?",
+  "Informasi apa yang masih kurang untuk menguji prediksi tersebut?",
+  "Apa kesimpulan sementara yang paling masuk akal saat ini?",
+];
+
 export default function PhaseTwo({
   initialAnswer,
   content,
   onComplete,
 }: Props) {
-  const [answer, setAnswer] = useState("");
+  const [responses, setResponses] = useState<string[]>(
+    Array(phaseQuestions.length).fill("")
+  );
   const [submitted, setSubmitted] = useState(false);
   const [showHint, setShowHint] = useState(false);
 
+  const updateResponse = (index: number, value: string) => {
+    setResponses((previous) => {
+      const next = [...previous];
+      next[index] = value;
+      return next;
+    });
+  };
+
+  const isComplete = responses.every((value) => value.trim().length > 0);
+
   const handleSubmit = () => {
-    if (!answer.trim()) return;
+    if (!isComplete) return;
     setSubmitted(true);
   };
 
@@ -71,22 +91,26 @@ export default function PhaseTwo({
 
         {!submitted ? (
           <>
-            <div className="mt-7">
-              <label
-                htmlFor="conflict-answer"
-                className="mb-3 block text-sm font-semibold"
-              >
-                Jawaban dan Alasanmu
-              </label>
+            <div className="mt-7 space-y-6">
+              {phaseQuestions.map((prompt, index) => (
+                <div key={prompt}>
+                  <label
+                    htmlFor={`phase-two-${index}`}
+                    className="mb-3 block text-sm font-semibold"
+                  >
+                    {index + 1}. {prompt}
+                  </label>
 
-              <textarea
-                id="conflict-answer"
-                value={answer}
-                onChange={(event) => setAnswer(event.target.value)}
-                rows={6}
-                placeholder="Tuliskan analisismu berdasarkan situasi di atas..."
-                className="w-full resize-y rounded-xl border border-border p-4 text-sm leading-relaxed outline-none focus:border-primary focus:ring-2 focus:ring-blue-100"
-              />
+                  <textarea
+                    id={`phase-two-${index}`}
+                    value={responses[index]}
+                    onChange={(event) => updateResponse(index, event.target.value)}
+                    rows={4}
+                    placeholder="Tuliskan jawabanmu di sini..."
+                    className="w-full resize-y rounded-xl border border-border p-4 text-sm leading-relaxed outline-none focus:border-primary focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+              ))}
             </div>
 
             <div className="mt-5">
@@ -115,7 +139,7 @@ export default function PhaseTwo({
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!answer.trim()}
+                disabled={!isComplete}
                 className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 Kirim Jawaban
@@ -130,9 +154,16 @@ export default function PhaseTwo({
                 <CheckCircle2 size={20} />
                 Jawaban Tercatat
               </div>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-green-900">
-                {answer.trim()}
-              </p>
+              <div className="mt-3 space-y-3 text-sm leading-relaxed text-green-900">
+                {responses.map((response, index) => (
+                  <div key={`summary-${index}`}>
+                    <p className="font-semibold text-green-800">
+                      {index + 1}. {phaseQuestions[index]}
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap">{response.trim()}</p>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="rounded-xl bg-blue-50 p-5">
@@ -148,7 +179,12 @@ export default function PhaseTwo({
             <div className="flex justify-end">
                 <button
                 type="button"
-                onClick={() => onComplete(answer.trim())}
+                onClick={() => onComplete(
+                  responses
+                    .map((response, index) => `${index + 1}. ${phaseQuestions[index]}\n${response.trim()}`)
+                    .filter((response) => response.trim().length > 0)
+                    .join("\n\n")
+                )}
                 className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"
                 >
                 Lanjut ke Fase 3

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -13,6 +13,11 @@ import {
 import type { CaseStudyContext } from "../data/caseStudies";
 import { loadLearningSession } from "../utils/learningStorage";
 import { isSupportedLearningCase } from "../data/supportedLearningCases";
+import {
+  createModuleAssignment,
+  fetchActiveModuleAssignment,
+  type StudentModuleAssignment,
+} from "../services/api";
 
 type LearningContext = CaseStudyContext;
 
@@ -51,33 +56,44 @@ export default function ContextSelection() {
 
   const [selectedContext, setSelectedContext] =
     useState<LearningContext | null>(null);
+  const [activeAssignment, setActiveAssignment] =
+    useState<StudentModuleAssignment | null>(null);
 
-  // Read the currently saved learning session.
+  useEffect(() => {
+    fetchActiveModuleAssignment().then((assignment) => {
+      setActiveAssignment(assignment);
+      if (assignment?.context) {
+        setSelectedContext(assignment.context as LearningContext);
+      }
+    });
+  }, []);
+
   const savedSession = loadLearningSession();
 
   const selected = contexts.find(
     (context) => context.id === selectedContext
   );
 
-  // A session can only be resumed when:
-  // 1. Its context matches the selected context.
-  // 2. Its phase is within the five-phase workflow.
-  // 3. Its case study is supported by the current demo.
-  const canResume = Boolean(
+  const activeContextMatch =
     selectedContext &&
-      savedSession &&
-      savedSession.context === selectedContext &&
-      savedSession.currentPhase >= 1 &&
-      savedSession.currentPhase <= 5 &&
-      savedSession.caseStudy &&
-      isSupportedLearningCase(savedSession.caseStudy)
+    activeAssignment &&
+    activeAssignment.context === selectedContext;
+
+  const canResume = Boolean(
+    (activeContextMatch ||
+      (selectedContext &&
+        savedSession &&
+        savedSession.context === selectedContext &&
+        savedSession.currentPhase >= 1 &&
+        savedSession.currentPhase <= 5 &&
+        savedSession.caseStudy &&
+        isSupportedLearningCase(savedSession.caseStudy)))
   );
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!selectedContext) return;
 
     const session = loadLearningSession();
-
     const hasResumableSession = Boolean(
       session &&
         session.context === selectedContext &&
@@ -87,24 +103,38 @@ export default function ContextSelection() {
         isSupportedLearningCase(session.caseStudy)
     );
 
-    // Resume the previous learning session
-    // without repeating the pre-test.
     if (hasResumableSession) {
       navigate("/learn/session", {
         state: {
           context: selectedContext,
         },
       });
-
       return;
     }
 
-    // Otherwise, start a new learning flow.
-    navigate("/learn/pre-test", {
-      state: {
-        context: selectedContext,
-      },
-    });
+    try {
+      if (!activeAssignment) {
+        await createModuleAssignment(selectedContext);
+      } else if (activeAssignment.context !== selectedContext) {
+        throw new Error(
+          "Kamu masih memiliki modul aktif di konteks lain. Selesaikan modul tersebut terlebih dahulu."
+        );
+      }
+
+      navigate("/learn/pre-test", {
+        state: {
+          context: selectedContext,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to assign learning module:", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Gagal menyiapkan modul pembelajaran.";
+
+      window.alert(message);
+    }
   };
 
   return (
@@ -155,12 +185,14 @@ export default function ContextSelection() {
           const isSelected = selectedContext === context.id;
 
           const isResumableContext = Boolean(
-            savedSession &&
+            (activeAssignment &&
+              activeAssignment.context === context.id) ||
+            (savedSession &&
               savedSession.context === context.id &&
               savedSession.currentPhase >= 1 &&
               savedSession.currentPhase <= 5 &&
               savedSession.caseStudy &&
-              isSupportedLearningCase(savedSession.caseStudy)
+              isSupportedLearningCase(savedSession.caseStudy))
           );
 
           return (
@@ -196,7 +228,9 @@ export default function ContextSelection() {
               {/* Resume indicator */}
               {isResumableContext && (
                 <span className="mt-3 inline-flex w-fit rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
-                  Lanjutkan Fase {savedSession?.currentPhase}
+                  {activeAssignment?.context === context.id
+                    ? "Modul aktif tersedia"
+                    : `Lanjutkan Fase ${savedSession?.currentPhase}`}
                 </span>
               )}
 

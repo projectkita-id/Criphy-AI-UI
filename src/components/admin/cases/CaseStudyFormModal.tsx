@@ -20,7 +20,7 @@ export type CaseStudyFormData = {
 type Props = {
   caseStudy: CaseStudy | null;
   onClose: () => void;
-  onSave: (data: CaseStudyFormData) => boolean;
+  onSave: (data: CaseStudyFormData) => boolean | Promise<boolean>;
 };
 
 type FormErrors = Partial<
@@ -68,7 +68,9 @@ export default function CaseStudyFormModal({
     }
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
     event.preventDefault();
 
     const nextErrors: FormErrors = {};
@@ -91,7 +93,7 @@ export default function CaseStudyFormModal({
       return;
     }
 
-    const saved = onSave({
+    const saved = await onSave({
       ...form,
       title: form.title.trim(),
       description: form.description.trim(),

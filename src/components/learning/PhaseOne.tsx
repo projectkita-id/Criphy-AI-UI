@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Lightbulb,
   Send,
+  TimerReset,
 } from "lucide-react";
 
 export type Confidence = "LOW" | "MEDIUM" | "HIGH";
@@ -12,6 +13,8 @@ export type Confidence = "LOW" | "MEDIUM" | "HIGH";
 export type PhaseOneResponse = {
   answer: string;
   confidence: Confidence;
+  answeredAt: string;
+  responseTimeSeconds: number;
 };
 
 type Props = {
@@ -28,18 +31,41 @@ const confidenceOptions: {
   { value: "HIGH", label: "Sangat Yakin" },
 ];
 
+const phaseQuestions = [
+  "Apa prediksi awalmu tentang situasi yang sedang kamu hadapi?",
+  "Apa alasan utama yang mendukung prediksi tersebut?",
+  "Apa yang paling kamu perhatikan dari situasi ini?",
+  "Apa yang masih kamu ragukan atau belum yakin?",
+  "Menurutmu, apa bukti atau informasi yang dibutuhkan untuk menguji prediksi ini?",
+];
+
 export default function PhaseOne({
   question,
   onComplete,
 }: Props) {
-  const [answer, setAnswer] = useState("");
+  const [responses, setResponses] = useState<string[]>(
+    Array(phaseQuestions.length).fill("")
+  );
   const [confidence, setConfidence] =
     useState<Confidence | null>(null);
+  const [responseStartedAt] = useState(() => Date.now());
 
   const [submitted, setSubmitted] = useState(false);
 
+  const updateResponse = (index: number, value: string) => {
+    setResponses((previous) => {
+      const next = [...previous];
+      next[index] = value;
+      return next;
+    });
+  };
+
+  const isComplete =
+    responses.every((value) => value.trim().length > 0) &&
+    confidence !== null;
+
   const handleSubmit = () => {
-    if (!answer.trim() || !confidence) return;
+    if (!isComplete) return;
     setSubmitted(true);
   };
 
@@ -56,22 +82,26 @@ export default function PhaseOne({
 
       {!submitted ? (
         <>
-          <div className="mt-7">
-            <label
-              htmlFor="student-answer"
-              className="mb-3 block text-sm font-semibold"
-            >
-              Prediksi dan Alasanmu
-            </label>
+          <div className="mt-7 space-y-6">
+            {phaseQuestions.map((prompt, index) => (
+              <div key={prompt}>
+                <label
+                  htmlFor={`phase-one-${index}`}
+                  className="mb-3 block text-sm font-semibold"
+                >
+                  {index + 1}. {prompt}
+                </label>
 
-            <textarea
-              id="student-answer"
-              value={answer}
-              onChange={(event) => setAnswer(event.target.value)}
-              rows={6}
-              placeholder="Tuliskan prediksi dan alasanmu di sini..."
-              className="w-full resize-y rounded-xl border border-border p-4 text-sm leading-relaxed outline-none focus:border-primary focus:ring-2 focus:ring-blue-100"
-            />
+                <textarea
+                  id={`phase-one-${index}`}
+                  value={responses[index]}
+                  onChange={(event) => updateResponse(index, event.target.value)}
+                  rows={4}
+                  placeholder="Tuliskan jawabanmu di sini..."
+                  className="w-full resize-y rounded-xl border border-border p-4 text-sm leading-relaxed outline-none focus:border-primary focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+            ))}
           </div>
 
           <div className="mt-6">
@@ -102,7 +132,7 @@ export default function PhaseOne({
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={!answer.trim() || !confidence}
+              disabled={!isComplete}
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               Kirim Jawaban
@@ -118,16 +148,32 @@ export default function PhaseOne({
               Jawaban Tercatat
             </div>
 
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-green-900">
-              {answer.trim()}
-            </p>
+            <div className="mt-3 space-y-3 text-sm leading-relaxed text-green-900">
+              {responses.map((response, index) => (
+                <div key={`summary-${index}`}>
+                  <p className="font-semibold text-green-800">
+                    {index + 1}. {phaseQuestions[index]}
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap">{response.trim()}</p>
+                </div>
+              ))}
+            </div>
 
-            <p className="mt-4 text-xs text-green-700">
-              Tingkat keyakinan:{" "}
-              {confidenceOptions.find(
-                (option) => option.value === confidence
-              )?.label}
-            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-green-700">
+              <span>
+                Tingkat keyakinan:{" "}
+                {confidenceOptions.find(
+                  (option) => option.value === confidence
+                )?.label}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <TimerReset size={14} />
+                {Math.max(
+                  1,
+                  Math.round((Date.now() - responseStartedAt) / 1000)
+                )} detik
+              </span>
+            </div>
           </div>
 
           <div className="rounded-xl border border-blue-100 bg-blue-50 p-5">
@@ -149,8 +195,16 @@ export default function PhaseOne({
                 if (!confidence) return;
 
                 onComplete({
-                  answer: answer.trim(),
+                  answer: responses
+                    .map((response, index) => `${index + 1}. ${phaseQuestions[index]}\n${response.trim()}`)
+                    .filter((response) => response.trim().length > 0)
+                    .join("\n\n"),
                   confidence,
+                  answeredAt: new Date().toISOString(),
+                  responseTimeSeconds: Math.max(
+                    1,
+                    Math.round((Date.now() - responseStartedAt) / 1000)
+                  ),
                 });
               }}
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"

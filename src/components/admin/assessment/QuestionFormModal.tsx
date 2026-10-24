@@ -1,12 +1,17 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
-import type { ManagedQuestion } from "../../../utils/assessmentQuestionStorage";
+import type { CaseStudyContext } from "../../../data/caseStudies";
+import type {
+  ManagedQuestion,
+  QuestionStage,
+} from "../../../utils/assessmentQuestionStorage";
 
 type QuestionType = "MULTIPLE_CHOICE" | "ESSAY";
 
 type QuestionForm = {
   type: QuestionType;
+  stage: QuestionStage;
   question: string;
   options: string[];
   correctAnswer: string;
@@ -14,6 +19,8 @@ type QuestionForm = {
 
 type Props = {
   editingQuestion: ManagedQuestion | null;
+  defaultStage?: QuestionStage;
+  context?: CaseStudyContext;
   onClose: () => void;
   onSave: (question: ManagedQuestion) => boolean;
 };
@@ -21,11 +28,13 @@ type Props = {
 const optionIds = ["A", "B", "C", "D"];
 
 function createForm(
-  question: ManagedQuestion | null
+  question: ManagedQuestion | null,
+  defaultStage: QuestionStage = "PRE_TEST"
 ): QuestionForm {
   if (!question) {
     return {
       type: "MULTIPLE_CHOICE",
+      stage: defaultStage,
       question: "",
       options: ["", "", "", ""],
       correctAnswer: "A",
@@ -35,6 +44,7 @@ function createForm(
   if (question.type === "MULTIPLE_CHOICE") {
     return {
       type: "MULTIPLE_CHOICE",
+      stage: question.stage ?? defaultStage,
       question: question.question,
       options: optionIds.map(
         (id) =>
@@ -47,6 +57,7 @@ function createForm(
 
   return {
     type: "ESSAY",
+    stage: question.stage ?? defaultStage,
     question: question.question,
     options: ["", "", "", ""],
     correctAnswer: "A",
@@ -55,11 +66,13 @@ function createForm(
 
 export default function QuestionFormModal({
   editingQuestion,
+  defaultStage = "PRE_TEST",
+  context,
   onClose,
   onSave,
 }: Props) {
   const [form, setForm] = useState<QuestionForm>(
-    () => createForm(editingQuestion)
+    () => createForm(editingQuestion, defaultStage)
   );
   const [error, setError] = useState("");
 
@@ -90,11 +103,15 @@ export default function QuestionFormModal({
               text: form.options[index].trim(),
             })),
             correctAnswer: form.correctAnswer,
+            stage: form.stage,
+            context,
           }
         : {
             id,
             type: "ESSAY",
             question: form.question.trim(),
+            stage: form.stage,
+            context,
           };
 
     if (onSave(question)) {
@@ -131,30 +148,56 @@ export default function QuestionFormModal({
         </div>
 
         <div className="mt-6 space-y-5">
-          <div>
-            <label
-              htmlFor="question-type"
-              className="mb-2 block text-sm font-medium"
-            >
-              Jenis Soal
-            </label>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label
+                htmlFor="question-type"
+                className="mb-2 block text-sm font-medium"
+              >
+                Jenis Soal
+              </label>
 
-            <select
-              id="question-type"
-              value={form.type}
-              onChange={(event) =>
-                setForm((previous) => ({
-                  ...previous,
-                  type: event.target.value as QuestionType,
-                }))
-              }
-              className="w-full rounded-xl border border-border p-3"
-            >
-              <option value="MULTIPLE_CHOICE">
-                Pilihan Ganda
-              </option>
-              <option value="ESSAY">Esai</option>
-            </select>
+              <select
+                id="question-type"
+                value={form.type}
+                onChange={(event) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    type: event.target.value as QuestionType,
+                  }))
+                }
+                className="w-full rounded-xl border border-border p-3"
+              >
+                <option value="MULTIPLE_CHOICE">
+                  Pilihan Ganda
+                </option>
+                <option value="ESSAY">Esai</option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="question-stage"
+                className="mb-2 block text-sm font-medium"
+              >
+                Tahap Asesmen
+              </label>
+
+              <select
+                id="question-stage"
+                value={form.stage}
+                onChange={(event) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    stage: event.target.value as QuestionStage,
+                  }))
+                }
+                className="w-full rounded-xl border border-border p-3"
+              >
+                <option value="PRE_TEST">Pre-test</option>
+                <option value="POST_TEST">Post-test</option>
+              </select>
+            </div>
           </div>
 
           <div>

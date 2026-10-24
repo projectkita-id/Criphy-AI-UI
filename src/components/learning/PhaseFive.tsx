@@ -65,6 +65,10 @@ export default function PhaseFive({
         <p className="mt-3 leading-relaxed text-text-secondary">
           {content.description}
         </p>
+
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Catatan penting: perubahan jawaban tidak selalu berarti lebih baik. Yang dinilai adalah kualitas alasan, bukti, dan pemahaman yang didukung data.
+        </div>
       </div>
 
       {/* Comparison */}

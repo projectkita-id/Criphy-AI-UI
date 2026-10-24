@@ -7,8 +7,9 @@ export function isSupportedLearningCase(
   caseStudy: CaseStudy
 ): boolean {
   return (
-    caseStudy.id === SUPPORTED_DEMO_CASE_ID &&
-    caseStudy.context === "DAILY_LIFE" &&
-    caseStudy.status === "PUBLISHED"
+    caseStudy.status === "PUBLISHED" &&
+    (caseStudy.context === "DAILY_LIFE" ||
+      caseStudy.context === "ENVIRONMENT" ||
+      caseStudy.context === "TECHNOLOGY")
   );
 }

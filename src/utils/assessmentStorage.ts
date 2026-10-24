@@ -10,6 +10,9 @@ export type AssessmentSubmission = {
   context: string | null;
   answers: AssessmentAnswer[];
   submittedAt: string;
+  attemptId?: string | null;
+  percentage?: number | null;
+  score?: number | null;
 };
 
 export type AssessmentSession = {

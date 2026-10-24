@@ -25,6 +25,10 @@ export default function QuestionCard({
             </span>
 
             <span className="rounded-lg bg-blue-50 px-3 py-1 text-xs font-semibold text-primary">
+              {question.stage === "POST_TEST" ? "Post-test" : "Pre-test"}
+            </span>
+
+            <span className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
               {question.type === "MULTIPLE_CHOICE"
                 ? "Pilihan Ganda"
                 : "Esai"}
